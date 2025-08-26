@@ -1,0 +1,121 @@
+﻿name: Main workflow
+
+on:
+  pull_request: 
+    branches:
+      - main
+  push:
+    branches:
+      - main
+
+jobs:
+  # Build and set version
+  build:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.versioning.outputs.VERSION }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '9.0.x'
+
+      - name: Restore dependencies
+        run: dotnet restore SocialMediaApi.sln
+
+      - name: Build
+        run: dotnet build SocialMediaApi.sln --no-restore -c Release
+
+      - name: Versioning
+        id: versioning
+        run: |
+          version_prefix=$(grep -oPm1 "(?<=<VersionPrefix>)[^<]+" src/API/API.csproj)
+          version="$version_prefix.${{ github.run_number }}"
+          echo "VERSION=$version" >> $GITHUB_OUTPUT
+          
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-output
+          path: |
+            **/bin/**
+            **/obj/**
+          
+  # Run unit tests
+  unit-tests:
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '9.0.x'
+
+      - name: Download build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: build-output
+
+      - name: Run domain unit tests
+        run: dotnet test tests/UnitTests/DomainUnitTests/DomainUnitTests.csproj -c Release --no-build
+
+      - name: Run application unit tests
+        run: dotnet test tests/UnitTests/ApplicationUnitTests/ApplicationUnitTests.csproj -c Release --no-build
+        
+  # Run integration tests
+  integration-tests:
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '9.0.x'
+
+      - name: Download build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: build-output
+
+      - name: Run integration tests
+        run: dotnet test tests/IntegrationTests/IntegrationTests.csproj -c Release --no-build
+        
+  # Build and push docker image
+  docker:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    needs:
+      - build
+      - unit-tests
+      - integration-tests
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build & Push Docker image
+        run: |
+          IMAGE_NAME=ghcr.io/${{ github.repository }}/socialmedia-api
+          VERSION=${{ needs.build.outputs.version }}
+
+          docker build -t $IMAGE_NAME:$VERSION -t $IMAGE_NAME:latest .
+          docker push $IMAGE_NAME:$VERSION
+          docker push $IMAGE_NAME:latest

@@ -1,5 +1,5 @@
-﻿using Domain.Users.Factories;
-using Shared.Exceptions.CustomExceptions;
+﻿using Domain.Common.Exceptions.CustomExceptions;
+using Domain.Users.Factories;
 
 namespace DomainUnitTests.AppUserTests.Factories;
 

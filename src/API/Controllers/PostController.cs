@@ -1,5 +1,8 @@
-﻿using API.DTOs.Params;
+﻿using API.DTOs.Bodies.Posts.Comments;
+using API.DTOs.Bodies.Posts.Root;
+using API.DTOs.Params;
 using API.Extensions;
+using Application.Common.Pagination;
 using Application.Requests.Posts.PostComment.Commands.AddCommentToPost;
 using Application.Requests.Posts.PostComment.Commands.RemoveCommentFromPost;
 using Application.Requests.Posts.PostComment.Queries.GetCommentsOfPost;
@@ -11,7 +14,7 @@ using Application.Requests.Posts.Root.Commands.DeletePost;
 using Application.Requests.Posts.Root.Queries.GetAllPaged;
 using Application.Requests.Posts.Root.Queries.GetById;
 using Application.Responses;
-using MediatR;
+using Cortex.Mediator;
 using Microsoft.AspNetCore.Mvc;
 
 namespace API.Controllers;
@@ -19,27 +22,31 @@ namespace API.Controllers;
 public class PostController(IMediator mediator) : BaseApiController
 {
     [HttpPost]
-    public async Task<ActionResult<PostResponseDto>> Create([FromBody]CreatePostCommand command)
+    public async Task<ActionResult<PostResponseDto>> Create([FromBody]CreatePostDto dto)
     {
-        return Ok(await mediator.Send(command));
+        var command = new CreatePostCommand(dto.Text, dto.UserId);
+        var result = await mediator.SendCommandAsync<CreatePostCommand, PostResponseDto>(command);
+        return CreatedAtAction(nameof(GetById), new {id = result.Id}, result);
     }
     
     [HttpDelete("{id}")]
     public async Task<ActionResult> Delete([FromRoute]string id)
     {
         var command = new DeletePostCommand(id);
-        return Ok(await mediator.Send(command));
+        await mediator.SendCommandAsync<DeletePostCommand, Unit>(command);
+        return Ok();
     }
     
     [HttpGet("{id}")]
     public async Task<ActionResult<PostResponseDto>> GetById([FromRoute]string id)
     {
         var query = new GetPostByIdQuery(id);
-        return Ok(await mediator.Send(query));
+        var result = await mediator.SendQueryAsync<GetPostByIdQuery, PostResponseDto>(query);
+        return Ok(result);
     }
     
     [HttpGet]
-    public async Task<ActionResult<PostResponseDto>> GetAllPaged([FromQuery]PaginationParams pagination)
+    public async Task<ActionResult<PagedResult<PostResponseDto>>> GetAllPaged([FromQuery]PaginationParams pagination)
     {
         var query = new GetAllPostsPagedQuery
         {
@@ -47,7 +54,7 @@ public class PostController(IMediator mediator) : BaseApiController
             PageSize = pagination.PageSize
         };
         
-        var result = await mediator.Send(query);
+        var result = await mediator.SendQueryAsync<GetAllPostsPagedQuery, PagedResult<PostResponseDto>>(query);
         Response.AddPaginationHeaders(result);
         
         return Ok(result);
@@ -55,52 +62,51 @@ public class PostController(IMediator mediator) : BaseApiController
     
     // Comments
     [HttpGet("{postId}/comments")]
-    public async Task<ActionResult<List<PostCommentResponseDto>>> GetCommentsOfPost(string postId)
+    public async Task<ActionResult<List<PostCommentResponseDto>>> GetCommentsOfPost([FromRoute]string postId)
     {
         var command = new GetCommentsOfPostQuery(postId);
-        return Ok(await mediator.Send(command));
+        var result = await mediator.SendQueryAsync<GetCommentsOfPostQuery, List<PostCommentResponseDto>>(command);
+        return Ok(result);
     }
     
     [HttpPost("{postId}/comments")]
-    public async Task<ActionResult> AddComment([FromRoute]string postId, [FromBody]string text)
+    public async Task<ActionResult<PostCommentResponseDto>> AddComment([FromRoute]string postId, [FromBody]AddCommentToPostDto dto)
     {
-        var userId = "TODO";
-        var command = new AddCommentToPostCommand(postId, userId, text);
-        await mediator.Send(command);
-        return Ok();
+        var command = new AddCommentToPostCommand(postId, dto.UserId, dto.Text);
+        var result = await mediator.SendCommandAsync<AddCommentToPostCommand, PostCommentResponseDto>(command);
+        return Ok(result);
     }
     
     [HttpDelete("{postId}/comments/{commentId}")]
-    public async Task<ActionResult> DeleteComment([FromRoute]string postId, [FromRoute]string commentId)
+    public async Task<ActionResult> DeleteComment([FromRoute]string postId, [FromRoute]string commentId, [FromQuery]string userId)
     {
-        var userId = "TODO";
         var command = new RemoveCommentFromPostCommand(postId, commentId, userId);
-        await mediator.Send(command);
+        await mediator.SendCommandAsync<RemoveCommentFromPostCommand, Unit>(command);
         return Ok();
     }
     
     // Likes
     [HttpGet("{postId}/likes")]
-    public async Task<ActionResult<List<PostLikeResponseDto>>> GetLikesOfPost(string postId)
+    public async Task<ActionResult<List<PostLikeResponseDto>>> GetLikesOfPost([FromRoute]string postId)
     {
         var command = new GetLikesOfPostQuery(postId);
-        return Ok(await mediator.Send(command));
+        var result = await mediator.SendQueryAsync<GetLikesOfPostQuery, List<PostLikeResponseDto>>(command);
+        return Ok(result);
     }
     
     [HttpPost("{postId}/likes")]
-    public async Task<ActionResult> LikePost([FromRoute]string postId, [FromBody]string userId)
+    public async Task<ActionResult<PostLikeResponseDto>> LikePost([FromRoute]string postId, [FromQuery]string userId)
     {
         var command = new LikePostCommand(userId, postId);
-        await mediator.Send(command);
-        return Ok();
+        var result = await mediator.SendCommandAsync<LikePostCommand, PostLikeResponseDto>(command);
+        return Ok(result);
     }
     
     [HttpDelete("{postId}/likes")]
-    public async Task<ActionResult> DislikePost([FromRoute]string postId)
+    public async Task<ActionResult> DislikePost([FromRoute]string postId, [FromQuery]string userId)
     {
-        var userId = "TODO";
         var command = new DislikePostCommand(postId, userId);
-        await mediator.Send(command);
+        await mediator.SendCommandAsync<DislikePostCommand, Unit>(command);
         return Ok();
     }
 }

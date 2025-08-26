@@ -1,5 +1,5 @@
-﻿using Domain.Users;
-using Shared.Exceptions.CustomExceptions;
+﻿using Domain.Common.Exceptions.CustomExceptions;
+using Domain.Users;
 
 namespace Domain.Posts.Validators;
 

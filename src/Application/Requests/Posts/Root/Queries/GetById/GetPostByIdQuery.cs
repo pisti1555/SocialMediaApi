@@ -1,6 +1,6 @@
 ﻿using Application.Responses;
-using MediatR;
+using Cortex.Mediator.Queries;
 
 namespace Application.Requests.Posts.Root.Queries.GetById;
 
-public record GetPostByIdQuery(string Id) : IRequest<PostResponseDto>;
+public record GetPostByIdQuery(string Id) : IQuery<PostResponseDto>;

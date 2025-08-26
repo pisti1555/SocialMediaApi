@@ -22,7 +22,7 @@ public record PaginationAttributes
             {
                 <= 0 => 10,
                 >= MaxPageSize => MaxPageSize,
-                _ => _pageSize
+                _ => value
             };
         }
     }

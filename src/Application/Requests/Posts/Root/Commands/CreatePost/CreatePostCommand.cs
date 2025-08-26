@@ -1,6 +1,6 @@
 ﻿using Application.Responses;
-using MediatR;
+using Cortex.Mediator.Commands;
 
 namespace Application.Requests.Posts.Root.Commands.CreatePost;
 
-public record CreatePostCommand(string Text, string UserId) : IRequest<PostResponseDto>;
+public record CreatePostCommand(string Text, string UserId) : ICommand<PostResponseDto>;

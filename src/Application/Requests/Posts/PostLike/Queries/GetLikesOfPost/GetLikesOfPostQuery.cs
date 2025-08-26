@@ -1,6 +1,6 @@
 ﻿using Application.Responses;
-using MediatR;
+using Cortex.Mediator.Queries;
 
 namespace Application.Requests.Posts.PostLike.Queries.GetLikesOfPost;
 
-public record GetLikesOfPostQuery(string PostId) : IRequest<List<PostLikeResponseDto>>;
+public record GetLikesOfPostQuery(string PostId) : IQuery<List<PostLikeResponseDto>>;

@@ -9,4 +9,6 @@ public class PostCommentResponseDto
     
     public required string UserName { get; init; }
     public required string Text { get; init; }
+    
+    public required DateTime CreatedAt { get; init; }
 }

@@ -1,37 +1,37 @@
-﻿using Application.Common.Interfaces.Repositories;
-using Domain.Posts;
-using MediatR;
-using Shared.Exceptions.CustomExceptions;
+﻿using Application.Common.Helpers;
+using Application.Common.Interfaces.Repositories.Post;
+using Cortex.Mediator;
+using Cortex.Mediator.Commands;
+using Domain.Common.Exceptions.CustomExceptions;
 
 namespace Application.Requests.Posts.PostLike.Commands.DislikePost;
 
-public class DislikePostHandler(IPostRepository postRepository) : IRequestHandler<DislikePostCommand>
-{
-    public async Task Handle(DislikePostCommand request, CancellationToken cancellationToken)
+public class DislikePostHandler(
+    IPostRepository postRepository
+) : ICommandHandler<DislikePostCommand, Unit>
+{ 
+    public async Task<Unit> Handle(DislikePostCommand request, CancellationToken cancellationToken)
     {
-        var userGuid = ParseGuid(request.UserId);
-        var postGuid = ParseGuid(request.PostId);
+        var userGuid = Parser.ParseIdOrThrow(request.UserId);
+        var postGuid = Parser.ParseIdOrThrow(request.PostId);
         
-        var post = await GetPostById(postGuid);
+        var like = await postRepository.LikeRepository.GetByUserIdAndPostIdAsync(userGuid, postGuid);
+        if (like is null) throw new BadRequestException("Like not found.");
         
-        post.Likes.Remove(post.Likes.First(x => x.UserId == userGuid));
+        if (like.UserId != userGuid) throw new BadRequestException("User does not own the like.");
+        if (like.PostId != postGuid) throw new BadRequestException("Post does not own the like.");
         
+        var post = await postRepository.GetByIdAsync(postGuid);
+        if (post is null) throw new BadRequestException("Post not found.");
+        
+        post.UpdateLastInteraction();
+        
+        postRepository.LikeRepository.Delete(like);
+        postRepository.Update(post);
+
         if (!await postRepository.SaveChangesAsync())
             throw new BadRequestException("Like could not be deleted.");
+        
+        return Unit.Value;
     }
-    
-    private static Guid ParseGuid(string id)
-    {
-        var result = Guid.TryParse(id, out var guid);
-        if (!result)
-            throw new BadRequestException("Cannot parse the id.");
-        return guid;
-    }
-    private async Task<Post> GetPostById(Guid postId)
-    {
-        var post = await postRepository.GetByIdAsync(postId);
-        if (post is null)
-            throw new NotFoundException("Post not found.");
-        return post;
-    } 
 }

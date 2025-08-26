@@ -1,14 +1,14 @@
-﻿using Application.Common.Interfaces.Repositories;
+﻿using Application.Common.Interfaces.Repositories.AppUser;
 using Application.Common.Pagination;
 using Application.Responses;
-using MediatR;
+using Cortex.Mediator.Queries;
 
 namespace Application.Requests.Users.Root.Queries.GetAllPaged;
 
-public class GetAllUsersPagedHandler(IAppUserRepository userRepository) : IRequestHandler<GetAllUsersPagedQuery, PagedResult<UserResponseDto>>
+public class GetAllUsersPagedHandler(IAppUserRepository userRepository) : IQueryHandler<GetAllUsersPagedQuery, PagedResult<UserResponseDto>>
 {
     public async Task<PagedResult<UserResponseDto>> Handle(GetAllUsersPagedQuery request, CancellationToken cancellationToken)
     {
-        return await userRepository.GetAllDtoPagedAsync(request);
+        return await userRepository.GetAllDtoPagedAsync(request.PageNumber, request.PageSize);
     }
 }

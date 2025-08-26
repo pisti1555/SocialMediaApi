@@ -1,4 +1,4 @@
-﻿using Shared.Exceptions.CustomExceptions;
+﻿using Domain.Common.Exceptions.CustomExceptions;
 
 namespace Domain.Users.Validators;
 

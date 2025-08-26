@@ -1,31 +1,26 @@
-﻿using Application.Common.Interfaces.Repositories;
+﻿using Application.Common.Helpers;
+using Application.Common.Interfaces.Repositories.Post;
 using Application.Responses;
-using MediatR;
-using Shared.Exceptions.CustomExceptions;
+using AutoMapper;
+using Cortex.Mediator.Queries;
+using Domain.Common.Exceptions.CustomExceptions;
 
 namespace Application.Requests.Posts.PostComment.Queries.GetCommentsOfPost;
 
-public class GetCommentsOfPostHandler(IPostRepository postRepository) : IRequestHandler<GetCommentsOfPostQuery, List<PostCommentResponseDto>>
+public class GetCommentsOfPostHandler(
+    IPostRepository postRepository,
+    IMapper mapper
+) : IQueryHandler<GetCommentsOfPostQuery, List<PostCommentResponseDto>>
 {
     public async Task<List<PostCommentResponseDto>> Handle(GetCommentsOfPostQuery request, CancellationToken cancellationToken)
     {
-        var guid = ParseGuid(request.PostId);
-        await ThrowIfPostNotExistsById(guid);
+        var guid = Parser.ParseIdOrThrow(request.PostId);
+        
+        var isPostExists = await postRepository.ExistsAsync(guid);
+        if (!isPostExists) throw new NotFoundException("Post not found.");
 
-        return await postRepository.GetAllCommentDtoOfPostAsync(guid);
-    }
-    
-    private static Guid ParseGuid(string id)
-    {
-        var result = Guid.TryParse(id, out var guid);
-        if (!result)
-            throw new BadRequestException("Cannot parse the id.");
-        return guid;
-    }
-    private async Task ThrowIfPostNotExistsById(Guid postId)
-    {
-        var exists = await postRepository.ExistsAsync(postId);
-        if (!exists)
-            throw new NotFoundException("Post not found.");
+        var comments = await postRepository.CommentRepository.GetAllCommentOfPostAsync(guid);
+
+        return mapper.Map<List<PostCommentResponseDto>>(comments);
     }
 }

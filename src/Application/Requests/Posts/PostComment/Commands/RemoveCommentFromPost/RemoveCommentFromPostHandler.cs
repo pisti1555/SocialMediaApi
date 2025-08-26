@@ -1,37 +1,36 @@
-﻿using Application.Common.Interfaces.Repositories;
-using Domain.Posts;
-using MediatR;
-using Shared.Exceptions.CustomExceptions;
+﻿using Application.Common.Helpers;
+using Application.Common.Interfaces.Repositories.Post;
+using Cortex.Mediator;
+using Cortex.Mediator.Commands;
+using Domain.Common.Exceptions.CustomExceptions;
 
 namespace Application.Requests.Posts.PostComment.Commands.RemoveCommentFromPost;
 
-public class RemoveCommentFromPostHandler(IPostRepository postRepository) : IRequestHandler<RemoveCommentFromPostCommand>
+public class RemoveCommentFromPostHandler(IPostRepository postRepository) : ICommandHandler<RemoveCommentFromPostCommand, Unit>
 {
-    public async Task Handle(RemoveCommentFromPostCommand request, CancellationToken cancellationToken)
+    public async Task<Unit> Handle(RemoveCommentFromPostCommand request, CancellationToken cancellationToken)
     {
-        var userGuid = ParseGuid(request.UserId);
-        var postGuid = ParseGuid(request.PostId);
-        var commentGuid = ParseGuid(request.CommentId);
-        var post = await GetPostById(postGuid);
+        var postGuid = Parser.ParseIdOrThrow(request.PostId);
+        var userGuid = Parser.ParseIdOrThrow(request.UserId);
+        var commentGuid = Parser.ParseIdOrThrow(request.CommentId);
         
-        post.Comments.Remove(post.Comments.First(x => x.Id == commentGuid && x.UserId == userGuid));
+        var post = await postRepository.GetByIdAsync(postGuid);
+        if (post is null) throw new BadRequestException("Post not found.");
         
+        var comment = await postRepository.CommentRepository.GetByIdAsync(commentGuid);
+        if (comment is null) throw new BadRequestException("Comment not found.");
+        
+        if (comment.PostId != postGuid) throw new BadRequestException("Post does not own the comment.");
+        if (comment.UserId != userGuid) throw new BadRequestException("User does not own the comment.");
+        
+        post.UpdateLastInteraction();
+        
+        postRepository.CommentRepository.Delete(comment);
+        postRepository.Update(post);
+
         if (!await postRepository.SaveChangesAsync())
             throw new BadRequestException("Comment could not be deleted.");
-    }
-    
-    private static Guid ParseGuid(string id)
-    {
-        var result = Guid.TryParse(id, out var guid);
-        if (!result)
-            throw new BadRequestException("Cannot parse the id.");
-        return guid;
-    }
-    private async Task<Post> GetPostById(Guid postId)
-    {
-        var post = await postRepository.GetByIdAsync(postId);
-        if (post is null)
-            throw new NotFoundException("Post not found.");
-        return post;
+        
+        return Unit.Value;
     }
 }

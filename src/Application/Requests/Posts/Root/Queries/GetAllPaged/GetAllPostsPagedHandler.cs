@@ -1,14 +1,14 @@
-﻿using Application.Common.Interfaces.Repositories;
+﻿using Application.Common.Interfaces.Repositories.Post;
 using Application.Common.Pagination;
 using Application.Responses;
-using MediatR;
+using Cortex.Mediator.Queries;
 
 namespace Application.Requests.Posts.Root.Queries.GetAllPaged;
 
-public class GetAllPostsPagedHandler(IPostRepository postRepository) : IRequestHandler<GetAllPostsPagedQuery, PagedResult<PostResponseDto>>
+public class GetAllPostsPagedHandler(IPostRepository postRepository) : IQueryHandler<GetAllPostsPagedQuery, PagedResult<PostResponseDto>>
 {
     public async Task<PagedResult<PostResponseDto>> Handle(GetAllPostsPagedQuery request, CancellationToken cancellationToken)
     {
-        return await postRepository.GetPostDtoPagedAsync(request);
+        return await postRepository.GetDtoPagedAsync(request.PageNumber, request.PageSize);
     }
 }
