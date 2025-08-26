@@ -15,7 +15,7 @@ services:
       - web
   
   socialmedia-api:
-    image: ${DOCKER_REGISTRY}socialmedia-api
+    image: ghcr.io/pisti1555/socialmedia-api:latest
     container_name: socialmedia-api
     build:
       context: .
