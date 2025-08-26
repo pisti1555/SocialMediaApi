@@ -3,7 +3,7 @@ using Domain.Posts;
 
 namespace Domain.Users;
 
-public class AppUser : BaseEntity, IEntityRoot
+public class AppUser : EntityBase
 {
     public string UserName { get; private set; } = string.Empty;
     public string Email { get; private set; } = string.Empty;
@@ -13,9 +13,14 @@ public class AppUser : BaseEntity, IEntityRoot
     public DateTime LastActive { get; private set; } = DateTime.UtcNow;
     
     // Relationships
-    public ICollection<Post> Posts { get; private set; } = [];
-    public ICollection<PostComment> PostComments { get; private set; } = [];
-    public ICollection<PostLike> PostLikes { get; private set; } = [];
+    private List<Post> _posts = [];
+    public IReadOnlyCollection<Post> Posts => _posts.AsReadOnly();
+    
+    private List<PostComment> _postComments = [];
+    public IReadOnlyCollection<PostComment> PostComments => _postComments.AsReadOnly();
+    
+    private List<PostLike> _postLikes = [];
+    public IReadOnlyCollection<PostLike> PostLikes => _postLikes.AsReadOnly();
     
     // Constructors
     protected internal AppUser() { }
@@ -27,4 +32,7 @@ public class AppUser : BaseEntity, IEntityRoot
         LastName = lastName;
         DateOfBirth = dateOfBirth;
     }
+    
+    // Methods
+    public void UpdateLastActive() => LastActive = DateTime.UtcNow;
 }

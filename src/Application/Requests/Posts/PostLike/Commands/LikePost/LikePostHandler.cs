@@ -1,50 +1,44 @@
-﻿using Application.Common.Interfaces.Repositories;
-using Domain.Posts;
+﻿using Application.Common.Helpers;
+using Application.Common.Interfaces.Repositories.AppUser;
+using Application.Common.Interfaces.Repositories.Post;
+using Application.Responses;
+using AutoMapper;
+using Cortex.Mediator.Commands;
+using Domain.Common.Exceptions.CustomExceptions;
 using Domain.Posts.Factories;
-using Domain.Users;
-using MediatR;
-using Shared.Exceptions.CustomExceptions;
 
 namespace Application.Requests.Posts.PostLike.Commands.LikePost;
 
 public class LikePostHandler(
-        IPostRepository postRepository, IAppUserRepository userRepository
-    ) : IRequestHandler<LikePostCommand>
+    IPostRepository postRepository,
+    IAppUserRepository userRepository,
+    IMapper mapper
+) : ICommandHandler<LikePostCommand, PostLikeResponseDto>
 {
-    public async Task Handle(LikePostCommand request, CancellationToken cancellationToken)
+    public async Task<PostLikeResponseDto> Handle(LikePostCommand request, CancellationToken cancellationToken)
     {
-        var postGuid = ParseGuid(request.PostId);
-        var userGuid = ParseGuid(request.UserId);
+        var postGuid = Parser.ParseIdOrThrow(request.PostId);
+        var userGuid = Parser.ParseIdOrThrow(request.UserId);
 
-        var post = await GetPostById(postGuid);
-        var user = await GetUserById(userGuid);
+        var post = await postRepository.GetByIdAsync(postGuid);
+        if (post is null) throw new BadRequestException("Post not found.");
+        
+        var user = await userRepository.GetByIdAsync(userGuid);
+        if (user is null) throw new BadRequestException("User not found.");
+
+        var hasUserLikedPost = await postRepository.LikeRepository.ExistsAsync(postGuid, userGuid);
+        if (hasUserLikedPost) throw new BadRequestException("User already liked post.");
         
         var like = PostLikeFactory.Create(user, post);
-        post.Likes.Add(like);
+        
+        post.UpdateLastInteraction();
+        
+        postRepository.LikeRepository.Add(like);
+        postRepository.Update(post);
         
         if (!await postRepository.SaveChangesAsync())
             throw new BadRequestException("Like could not be created.");
+        
+        return mapper.Map<PostLikeResponseDto>(like);
     }
-    
-    private static Guid ParseGuid(string id)
-    {
-        var result = Guid.TryParse(id, out var guid);
-        if (!result)
-            throw new BadRequestException("Cannot parse the id.");
-        return guid;
-    }
-    private async Task<AppUser> GetUserById(Guid userId)
-    {
-        var user = await userRepository.GetByIdAsync(userId);
-        if (user is null)
-            throw new NotFoundException("User not found.");
-        return user;
-    } 
-    private async Task<Post> GetPostById(Guid postId)
-    {
-        var post = await postRepository.GetByIdAsync(postId);
-        if (post is null)
-            throw new NotFoundException("Post not found.");
-        return post;
-    } 
 }

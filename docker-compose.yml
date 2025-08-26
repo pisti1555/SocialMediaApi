@@ -1,0 +1,56 @@
+services:
+  nginx:
+    image: nginx:1.29.1-alpine
+    container_name: nginx
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/certs:/etc/nginx/certs:ro
+    depends_on:
+      - socialmedia-api
+    networks:
+      - web
+  
+  socialmedia-api:
+    image: ${DOCKER_REGISTRY}socialmedia-api
+    container_name: socialmedia-api
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: final
+    environment:
+      ASPNETCORE_ENVIRONMENT: "Production"
+      DOTNET_RUNNING_IN_CONTAINER: "true"
+      ASPNETCORE_URLS: "http://+:8080"
+    depends_on:
+      - socialmedia-db
+    expose:
+      - 8080
+    networks:
+      - web
+    restart: unless-stopped
+
+  socialmedia-db:
+    image: postgres:17.1-alpine3.20
+    container_name: socialmedia-db
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    environment:
+      POSTGRES_DB: social_media
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    expose:
+      - 5432
+    networks:
+      - web
+    restart: unless-stopped
+
+networks:
+  web:
+    driver: bridge
+
+volumes:
+  db-data:

@@ -3,14 +3,14 @@ using Domain.Users;
 
 namespace Domain.Posts;
 
-public class PostComment : BaseEntity
+public class PostComment : EntityBase
 {
     public string Text { get; private set; } = string.Empty;
 
     // Realtionships
-    public Guid UserId;
+    public Guid UserId { get; private set; }
     public AppUser User { get; private set; }
-    public Guid PostId;
+    public Guid PostId { get; private set; }
     public Post Post { get; private set; }
 
     // Constructors   

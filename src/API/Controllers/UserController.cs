@@ -5,7 +5,7 @@ using Application.Requests.Users.Root.Commands.CreateUser;
 using Application.Requests.Users.Root.Queries.GetAllPaged;
 using Application.Requests.Users.Root.Queries.GetById;
 using Application.Responses;
-using MediatR;
+using Cortex.Mediator;
 using Microsoft.AspNetCore.Mvc;
 
 namespace API.Controllers;
@@ -15,14 +15,16 @@ public class UserController(IMediator mediator) : BaseApiController
     [HttpPost]
     public async Task<ActionResult<UserResponseDto>> Create([FromBody]CreateUserCommand command)
     {
-        return Ok(await mediator.Send(command));
+        var result = await mediator.SendCommandAsync<CreateUserCommand, UserResponseDto>(command);
+        return CreatedAtAction(nameof(GetById), new {id = result.Id}, result);
     }
     
     [HttpGet("{id}")]
     public async Task<ActionResult<UserResponseDto>> GetById([FromRoute]string id)
     {
         var query = new GetUserByIdQuery(id);
-        return Ok(await mediator.Send(query));
+        var result = await mediator.SendQueryAsync<GetUserByIdQuery, UserResponseDto>(query);
+        return Ok(result);
     }
     
     [HttpGet]
@@ -34,7 +36,7 @@ public class UserController(IMediator mediator) : BaseApiController
             PageSize = pagination.PageSize
         };
         
-        var result = await mediator.Send(query);
+        var result = await mediator.SendQueryAsync<GetAllUsersPagedQuery, PagedResult<UserResponseDto>>(query);
         Response.AddPaginationHeaders(result);
         
         return Ok(result);

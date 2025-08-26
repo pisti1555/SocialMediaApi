@@ -1,13 +1,16 @@
-﻿using Application.Common.Interfaces.Repositories;
+﻿using Application.Common.Interfaces.Repositories.AppUser;
 using Application.Responses;
 using AutoMapper;
+using Cortex.Mediator.Commands;
+using Domain.Common.Exceptions.CustomExceptions;
 using Domain.Users.Factories;
-using MediatR;
-using Shared.Exceptions.CustomExceptions;
 
 namespace Application.Requests.Users.Root.Commands.CreateUser;
 
-public class CreateUserHandler(IAppUserRepository userRepository, IMapper mapper) : IRequestHandler<CreateUserCommand, UserResponseDto>
+public class CreateUserHandler(
+    IAppUserRepository userRepository,
+    IMapper mapper
+) : ICommandHandler<CreateUserCommand, UserResponseDto>
 {
     public async Task<UserResponseDto> Handle(CreateUserCommand request, CancellationToken cancellationToken)
     {
@@ -22,7 +25,7 @@ public class CreateUserHandler(IAppUserRepository userRepository, IMapper mapper
         
         if (!await userRepository.SaveChangesAsync())
             throw new BadRequestException("User could not be created.");
-
+        
         return mapper.Map<UserResponseDto>(user);
     }
 

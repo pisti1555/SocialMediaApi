@@ -1,51 +1,41 @@
-﻿using Application.Common.Interfaces.Repositories;
-using Domain.Posts;
+﻿using Application.Common.Helpers;
+using Application.Common.Interfaces.Repositories.AppUser;
+using Application.Common.Interfaces.Repositories.Post;
+using Application.Responses;
+using AutoMapper;
+using Cortex.Mediator.Commands;
+using Domain.Common.Exceptions.CustomExceptions;
 using Domain.Posts.Factories;
-using Domain.Users;
-using MediatR;
-using Shared.Exceptions.CustomExceptions;
 
 namespace Application.Requests.Posts.PostComment.Commands.AddCommentToPost;
 
 public class AddCommentToPostHandler(
-        IPostRepository postRepository, IAppUserRepository userRepository
-    ) : IRequestHandler<AddCommentToPostCommand>
+    IPostRepository postRepository,
+    IAppUserRepository userRepository,
+    IMapper mapper
+) : ICommandHandler<AddCommentToPostCommand, PostCommentResponseDto>
 {
-    public async Task Handle(AddCommentToPostCommand request, CancellationToken cancellationToken)
+    public async Task<PostCommentResponseDto> Handle(AddCommentToPostCommand request, CancellationToken cancellationToken)
     {
-        var userGuid = ParseGuid(request.UserId);
-        var postGuid = ParseGuid(request.PostId);
+        var userGuid = Parser.ParseIdOrThrow(request.UserId);
+        var postGuid = Parser.ParseIdOrThrow(request.PostId);
         
-        var user = await GetUserById(userGuid);
-        var post = await GetPostById(postGuid);
+        var user = await userRepository.GetByIdAsync(userGuid);
+        if (user is null) throw new BadRequestException("User not found.");
+        
+        var post = await postRepository.GetByIdAsync(postGuid);
+        if (post is null) throw new BadRequestException("Post not found.");
         
         var comment = PostCommentFactory.Create(request.Text, user, post);
         
-        post.Comments.Add(comment);
+        post.UpdateLastInteraction();
         
+        postRepository.CommentRepository.Add(comment);
+        postRepository.Update(post);
+
         if (!await postRepository.SaveChangesAsync())
             throw new BadRequestException("Comment could not be created.");
+        
+        return mapper.Map<PostCommentResponseDto>(comment);
     }
-    
-    private static Guid ParseGuid(string id)
-    {
-        var result = Guid.TryParse(id, out var guid);
-        if (!result)
-            throw new BadRequestException("Cannot parse the id.");
-        return guid;
-    }
-    private async Task<AppUser> GetUserById(Guid userId)
-    {
-        var user = await userRepository.GetByIdAsync(userId);
-        if (user is null)
-            throw new NotFoundException("User not found.");
-        return user;
-    }
-    private async Task<Post> GetPostById(Guid postId)
-    {
-        var post = await postRepository.GetByIdAsync(postId);
-        if (post is null)
-            throw new NotFoundException("Post not found.");
-        return post;
-    } 
 }

@@ -3,11 +3,11 @@ using Domain.Users;
 
 namespace Domain.Posts;
 
-public class PostLike : BaseEntity
+public class PostLike : EntityBase
 {
-    public Guid UserId;
+    public Guid UserId { get; private set; }
     public AppUser User { get; private set; }
-    public Guid PostId;
+    public Guid PostId { get; private set; }
     public Post Post { get; private set; }
 
     // Constructors

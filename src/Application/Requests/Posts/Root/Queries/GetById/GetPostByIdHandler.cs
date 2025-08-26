@@ -1,28 +1,20 @@
-﻿using Application.Common.Interfaces.Repositories;
+﻿using Application.Common.Helpers;
+using Application.Common.Interfaces.Repositories.Post;
 using Application.Responses;
-using MediatR;
-using Shared.Exceptions.CustomExceptions;
+using AutoMapper;
+using Cortex.Mediator.Queries;
+using Domain.Common.Exceptions.CustomExceptions;
 
 namespace Application.Requests.Posts.Root.Queries.GetById;
 
-public class GetPostByIdHandler(IPostRepository postRepository) : IRequestHandler<GetPostByIdQuery, PostResponseDto>
+public class GetPostByIdHandler(IPostRepository postRepository, IMapper mapper) : IQueryHandler<GetPostByIdQuery, PostResponseDto>
 {
     public async Task<PostResponseDto> Handle(GetPostByIdQuery request, CancellationToken cancellationToken)
     {
-        var guid = ParseGuid(request.Id);
+        var guid = Parser.ParseIdOrThrow(request.Id);
         
-        var post = await postRepository.GetPostDtoByIdAsync(guid);
-        if (post is null)
-            throw new NotFoundException("Post not found.");
-        
-        return post;
-    }
-    
-    private static Guid ParseGuid(string id)
-    {
-        var result = Guid.TryParse(id, out var guid);
-        if (!result)
-            throw new BadRequestException("Cannot parse the id.");
-        return guid;  
+        var post = await postRepository.GetByIdAsync(guid);
+        return post is null ? 
+            throw new NotFoundException("Post not found.") : mapper.Map<PostResponseDto>(post);
     }
 }
