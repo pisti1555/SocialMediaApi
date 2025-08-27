@@ -12,7 +12,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Folder Include="Common\Interfaces\Services\" />
+    <Folder Include="Contracts\Services\" />
   </ItemGroup>
 
   <PropertyGroup>

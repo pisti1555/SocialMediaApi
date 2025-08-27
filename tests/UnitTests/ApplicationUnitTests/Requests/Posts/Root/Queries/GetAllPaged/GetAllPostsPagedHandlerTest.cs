@@ -1,5 +1,5 @@
-﻿using Application.Common.Interfaces.Persistence.Repositories.Post;
-using Application.Common.Pagination;
+﻿using Application.Common.Pagination;
+using Application.Contracts.Persistence.Repositories.Post;
 using Application.Requests.Posts.Root.Queries.GetAllPaged;
 using Application.Responses;
 using ApplicationUnitTests.Common;

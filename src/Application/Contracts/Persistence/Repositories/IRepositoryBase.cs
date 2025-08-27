@@ -1,4 +1,4 @@
-﻿namespace Application.Common.Interfaces.Persistence.Repositories;
+﻿namespace Application.Contracts.Persistence.Repositories;
 
 public interface IRepositoryBase
 {

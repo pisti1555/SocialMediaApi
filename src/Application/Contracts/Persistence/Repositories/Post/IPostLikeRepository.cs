@@ -1,6 +1,6 @@
 ﻿using Domain.Posts;
 
-namespace Application.Common.Interfaces.Persistence.Repositories.Post;
+namespace Application.Contracts.Persistence.Repositories.Post;
 
 public interface IPostLikeRepository
 {

@@ -1,4 +1,4 @@
-﻿using Application.Common.Interfaces.Persistence.Repositories.Post;
+﻿using Application.Contracts.Persistence.Repositories.Post;
 using Application.Requests.Posts.PostLike.Commands.DislikePost;
 using ApplicationUnitTests.Common;
 using Domain.Common.Exceptions.CustomExceptions;

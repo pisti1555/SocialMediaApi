@@ -1,5 +1,5 @@
-﻿using Application.Common.Interfaces.Persistence.Repositories.Post;
-using Application.Common.Mappings;
+﻿using Application.Common.Mappings;
+using Application.Contracts.Persistence.Repositories.Post;
 using Application.Requests.Posts.PostLike.Queries.GetLikesOfPost;
 using ApplicationUnitTests.Common;
 using AutoMapper;

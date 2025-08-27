@@ -1,4 +1,4 @@
-﻿using Application.Common.Interfaces.Persistence.Repositories.AppUser;
+﻿using Application.Contracts.Persistence.Repositories.AppUser;
 using Application.Requests.Users.Root.Commands.CreateUser;
 using ApplicationUnitTests.Common;
 using Domain.Common.Exceptions.CustomExceptions;

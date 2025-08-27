@@ -1,5 +1,5 @@
-﻿using Application.Common.Interfaces.Persistence.Repositories.AppUser;
-using Application.Common.Pagination;
+﻿using Application.Common.Pagination;
+using Application.Contracts.Persistence.Repositories.AppUser;
 using Application.Requests.Users.Root.Queries.GetAllPaged;
 using Application.Responses;
 using Moq;

@@ -1,5 +1,5 @@
-﻿using Application.Common.Interfaces.Persistence.Repositories.AppUser;
-using Application.Common.Mappings;
+﻿using Application.Common.Mappings;
+using Application.Contracts.Persistence.Repositories.AppUser;
 using Application.Requests.Users.Root.Queries.GetById;
 using ApplicationUnitTests.Common;
 using AutoMapper;

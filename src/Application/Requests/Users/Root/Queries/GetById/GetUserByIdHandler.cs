@@ -1,5 +1,5 @@
 ﻿using Application.Common.Helpers;
-using Application.Common.Interfaces.Persistence.Repositories.AppUser;
+using Application.Contracts.Persistence.Repositories.AppUser;
 using Application.Responses;
 using AutoMapper;
 using Cortex.Mediator.Queries;

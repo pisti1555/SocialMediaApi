@@ -1,7 +1,7 @@
 ﻿using Application.Common.Pagination;
 using Application.Responses;
 
-namespace Application.Common.Interfaces.Persistence.Repositories.Post;
+namespace Application.Contracts.Persistence.Repositories.Post;
 
 public interface IPostRepository : IRepositoryBase
 {

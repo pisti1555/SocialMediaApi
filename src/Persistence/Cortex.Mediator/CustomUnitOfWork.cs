@@ -1,4 +1,4 @@
-﻿using Application.Common.Interfaces.Persistence.Cortex.Mediator;
+﻿using Application.Contracts.Persistence.Cortex.Mediator;
 using Cortex.Mediator.Infrastructure;
 using Microsoft.EntityFrameworkCore.Storage;
 using Persistence.DataContext;

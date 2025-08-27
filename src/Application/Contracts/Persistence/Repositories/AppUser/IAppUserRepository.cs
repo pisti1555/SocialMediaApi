@@ -1,7 +1,7 @@
 ﻿using Application.Common.Pagination;
 using Application.Responses;
 
-namespace Application.Common.Interfaces.Persistence.Repositories.AppUser;
+namespace Application.Contracts.Persistence.Repositories.AppUser;
 
 public interface IAppUserRepository : IRepositoryBase
 {
