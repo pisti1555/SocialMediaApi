@@ -5,27 +5,35 @@ using Infrastructure;
 using Microsoft.EntityFrameworkCore;
 using Persistence;
 using Persistence.DataContext;
+using Serilog;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// Use Serilog
+builder.Host.UseSerilog((context, config) =>
+{
+    config.ReadFrom.Configuration(context.Configuration);
+    config.Enrich.WithProperty("Environment", context.HostingEnvironment.EnvironmentName);
+});
+
+// Add layers to the program
+builder.Services.AddApplication(builder.Configuration);
 builder.Services.AddInfrastructure(builder.Configuration);
 builder.Services.AddPersistence(builder.Configuration);
-builder.Services.AddApplication(builder.Configuration);
 builder.Services.AddApi();
 
-builder.Services.AddOpenApi();
-builder.Services.AddEndpointsApiExplorer();
 
 var app = builder.Build();
-
+app.UseStaticFiles();
+app.UseSerilogRequestLogging();
+app.UseMiddleware<ErrorHandlerMiddleware>();
+app.UseCors();
 app.MapControllers();
 
 if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();
 }
-
-app.UseMiddleware<ErrorHandlerMiddleware>();
 
 // Migrate database
 using (var scope = app.Services.CreateScope())
@@ -36,4 +44,5 @@ using (var scope = app.Services.CreateScope())
 
 app.Run();
 
+// Expose Program class for integration testing
 public partial class Program { }
