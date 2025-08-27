@@ -1,4 +1,4 @@
-﻿using Application.Common.Interfaces.Repositories.AppUser;
+﻿using Application.Common.Interfaces.Persistence.Repositories.AppUser;
 using Application.Common.Mappings;
 using Application.Requests.Users.Root.Queries.GetById;
 using ApplicationUnitTests.Common;

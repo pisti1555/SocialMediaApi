@@ -1,5 +1,5 @@
-﻿using Application.Requests.Users.Root.Commands.CreateUser;
-using Application.Common.Interfaces.Repositories.AppUser;
+﻿using Application.Common.Interfaces.Persistence.Repositories.AppUser;
+using Application.Requests.Users.Root.Commands.CreateUser;
 using ApplicationUnitTests.Common;
 using Domain.Common.Exceptions.CustomExceptions;
 using Domain.Users;

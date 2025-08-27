@@ -1,5 +1,5 @@
-﻿using Application.Common.Interfaces.Repositories.AppUser;
-using Application.Common.Interfaces.Repositories.Post;
+﻿using Application.Common.Interfaces.Persistence.Repositories.AppUser;
+using Application.Common.Interfaces.Persistence.Repositories.Post;
 using Application.Requests.Posts.PostLike.Commands.LikePost;
 using ApplicationUnitTests.Common;
 using Domain.Common.Exceptions.CustomExceptions;

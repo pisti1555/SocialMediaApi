@@ -1,9 +1,9 @@
-﻿using Application.Common.Interfaces.Persistence;
+﻿using Application.Common.Interfaces.Persistence.Cortex.Mediator;
 using Cortex.Mediator.Infrastructure;
 using Microsoft.EntityFrameworkCore.Storage;
 using Persistence.DataContext;
 
-namespace Persistence;
+namespace Persistence.Cortex.Mediator;
 
 // Retouch Cortex.Mediator.Infrastructure.UnitOfWork
 public class CustomUnitOfWork(AppDbContext context) : ICustomUnitOfWork

@@ -1,5 +1,5 @@
 ﻿using Application.Common.Helpers;
-using Application.Common.Interfaces.Repositories.Post;
+using Application.Common.Interfaces.Persistence.Repositories.Post;
 using Cortex.Mediator;
 using Cortex.Mediator.Commands;
 using Domain.Common.Exceptions.CustomExceptions;

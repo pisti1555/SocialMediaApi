@@ -1,4 +1,4 @@
-﻿using Application.Common.Interfaces.Repositories.Post;
+﻿using Application.Common.Interfaces.Persistence.Repositories.Post;
 using Application.Common.Pagination;
 using Application.Requests.Posts.Root.Queries.GetAllPaged;
 using Application.Responses;

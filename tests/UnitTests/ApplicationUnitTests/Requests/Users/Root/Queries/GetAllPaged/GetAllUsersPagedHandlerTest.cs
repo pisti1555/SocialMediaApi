@@ -1,4 +1,4 @@
-﻿using Application.Common.Interfaces.Repositories.AppUser;
+﻿using Application.Common.Interfaces.Persistence.Repositories.AppUser;
 using Application.Common.Pagination;
 using Application.Requests.Users.Root.Queries.GetAllPaged;
 using Application.Responses;

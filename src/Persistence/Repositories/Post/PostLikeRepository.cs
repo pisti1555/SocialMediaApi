@@ -1,4 +1,4 @@
-﻿using Application.Common.Interfaces.Repositories.Post;
+﻿using Application.Common.Interfaces.Persistence.Repositories.Post;
 using Domain.Posts;
 using Microsoft.EntityFrameworkCore;
 using Persistence.DataContext;
