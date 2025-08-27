@@ -48,6 +48,8 @@ public class ErrorHandlerMiddleware(
         }
         catch (Exception e)
         {
+            logger.LogError(e, "Unhandled exception occurred");
+            
             response.StatusCode = 500;
             
             var message = env.IsDevelopment()
@@ -61,8 +63,6 @@ public class ErrorHandlerMiddleware(
                     Message = message
                 }
             );
-            
-            logger.LogError(e, "Unhandled exception: {Message}", e.Message);
         }
     }
     
