@@ -1,6 +1,6 @@
 ﻿using Application.Contracts.Persistence.Repositories.AppUser;
 using Application.Requests.Users.Root.Commands.CreateUser;
-using ApplicationUnitTests.Common;
+using ApplicationUnitTests.Helpers;
 using Domain.Common.Exceptions.CustomExceptions;
 using Domain.Users;
 using Moq;
@@ -15,7 +15,7 @@ public class CreateUserHandlerTest
     public CreateUserHandlerTest()
     {
         _userRepositoryMock = new Mock<IAppUserRepository>();
-        _createUserHandler = new CreateUserHandler(_userRepositoryMock.Object, TestMapperSetup.SetupMapper());
+        _createUserHandler = new CreateUserHandler(_userRepositoryMock.Object, MapperHelper.GetMapper());
     }
 
     [Fact]
@@ -75,6 +75,8 @@ public class CreateUserHandlerTest
 
         // Act & Assert
         await Assert.ThrowsAsync<BadRequestException>(() => _createUserHandler.Handle(command, CancellationToken.None));
+        _userRepositoryMock.Verify(x => x.Add(It.IsAny<AppUser>()), Times.Never);
+        _userRepositoryMock.Verify(x => x.SaveChangesAsync(), Times.Never);
     }
 
     [Fact]
@@ -85,5 +87,7 @@ public class CreateUserHandlerTest
 
         // Act & Assert
         await Assert.ThrowsAsync<BadRequestException>(() => _createUserHandler.Handle(command, CancellationToken.None));
+        _userRepositoryMock.Verify(x => x.Add(It.IsAny<AppUser>()), Times.Never);
+        _userRepositoryMock.Verify(x => x.SaveChangesAsync(), Times.Never);
     }
 }

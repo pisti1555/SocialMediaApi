@@ -13,6 +13,7 @@ namespace IntegrationTests.Controllers;
 
 public class PostLikeControllerTests(CustomWebApplicationFactoryFixture factory) : BaseControllerTest(factory), IAsyncLifetime
 {
+    private const string PostsBaseUrl = "/api/posts";
     private AppUser _user = null!;
     private Post _post = null!;
     
@@ -23,7 +24,7 @@ public class PostLikeControllerTests(CustomWebApplicationFactoryFixture factory)
         DbContext.PostLikes.Add(like);
         await DbContext.SaveChangesAsync();
         
-        var response = await Client.GetAsync($"/api/post/{_post.Id}/likes");
+        var response = await Client.GetAsync($"{PostsBaseUrl}/{_post.Id}/likes");
         var result = await response.Content.ReadFromJsonAsync<List<PostLikeResponseDto>>();
         
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
@@ -37,7 +38,7 @@ public class PostLikeControllerTests(CustomWebApplicationFactoryFixture factory)
     [Fact]
     public async Task GetLikesOfPost_ShouldReturnEmptyList()
     {
-        var response = await Client.GetAsync($"/api/post/{_post.Id}/likes");
+        var response = await Client.GetAsync($"{PostsBaseUrl}/{_post.Id}/likes");
         var result = await response.Content.ReadFromJsonAsync<List<PostCommentResponseDto>>();
         
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
@@ -48,7 +49,7 @@ public class PostLikeControllerTests(CustomWebApplicationFactoryFixture factory)
     [Fact]
     public async Task Like_ShouldReturnOkResponse_WithPostLikeDto()
     {
-        var response = await Client.PostAsync($"/api/post/{_post.Id}/likes?userId={_user.Id.ToString()}", null);
+        var response = await Client.PostAsync($"{PostsBaseUrl}/{_post.Id}/likes?userId={_user.Id.ToString()}", null);
         var result = await response.Content.ReadFromJsonAsync<PostLikeResponseDto>();
 
         var firstFoundLikeOfPost = await DbContext.PostLikes
@@ -65,7 +66,7 @@ public class PostLikeControllerTests(CustomWebApplicationFactoryFixture factory)
     [Fact]
     public async Task Like_ShouldReturnBadRequest_WhenPostNotFound()
     {
-        var response = await Client.PostAsJsonAsync($"/api/post/{Guid.NewGuid().ToString()}/likes", _user.Id.ToString());
+        var response = await Client.PostAsJsonAsync($"{PostsBaseUrl}/{Guid.NewGuid().ToString()}/likes", _user.Id.ToString());
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
     }
     
@@ -76,7 +77,7 @@ public class PostLikeControllerTests(CustomWebApplicationFactoryFixture factory)
         DbContext.PostLikes.Add(like);
         await DbContext.SaveChangesAsync();
         
-        var response = await Client.DeleteAsync($"/api/post/{_post.Id.ToString()}/likes?userId={_user.Id.ToString()}");
+        var response = await Client.DeleteAsync($"{PostsBaseUrl}/{_post.Id.ToString()}/likes?userId={_user.Id.ToString()}");
  
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
     }
@@ -84,7 +85,7 @@ public class PostLikeControllerTests(CustomWebApplicationFactoryFixture factory)
     [Fact]
     public async Task Dislike_ShouldReturnBadRequest_WhenPostNotFound()
     {
-        var response = await Client.DeleteAsync($"/api/post/{Guid.NewGuid().ToString()}/likes?userId={_user.Id.ToString()}");
+        var response = await Client.DeleteAsync($"{PostsBaseUrl}/{Guid.NewGuid().ToString()}/likes?userId={_user.Id.ToString()}");
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
     }
     

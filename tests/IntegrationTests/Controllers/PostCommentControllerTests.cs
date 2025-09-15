@@ -14,6 +14,7 @@ namespace IntegrationTests.Controllers;
 
 public class PostCommentControllerTests(CustomWebApplicationFactoryFixture factory) : BaseControllerTest(factory), IAsyncLifetime
 {
+    private const string PostsBaseUrl = "/api/posts";
     private AppUser _user = null!;
     private Post _post = null!;
 
@@ -24,7 +25,7 @@ public class PostCommentControllerTests(CustomWebApplicationFactoryFixture facto
         DbContext.PostComments.Add(comment);
         await DbContext.SaveChangesAsync();
         
-        var response = await Client.GetAsync($"/api/post/{_post.Id}/comments");
+        var response = await Client.GetAsync($"{PostsBaseUrl}/{_post.Id}/comments");
         var result = await response.Content.ReadFromJsonAsync<List<PostCommentResponseDto>>();
         
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
@@ -38,7 +39,7 @@ public class PostCommentControllerTests(CustomWebApplicationFactoryFixture facto
     [Fact]
     public async Task GetCommentsOfPost_ShouldReturnEmptyList()
     {
-        var response = await Client.GetAsync($"/api/post/{_post.Id}/comments");
+        var response = await Client.GetAsync($"{PostsBaseUrl}/{_post.Id}/comments");
         var result = await response.Content.ReadFromJsonAsync<List<PostCommentResponseDto>>();
         
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
@@ -51,7 +52,7 @@ public class PostCommentControllerTests(CustomWebApplicationFactoryFixture facto
     {
         var dto = new AddCommentToPostDto(_user.Id.ToString(), "Test text");
         
-        var response = await Client.PostAsJsonAsync($"/api/post/{_post.Id}/comments", dto);
+        var response = await Client.PostAsJsonAsync($"{PostsBaseUrl}/{_post.Id}/comments", dto);
         var result = await response.Content.ReadFromJsonAsync<PostCommentResponseDto>();
         
         var firstFoundCommentOfPost = await DbContext.PostComments
@@ -69,7 +70,7 @@ public class PostCommentControllerTests(CustomWebApplicationFactoryFixture facto
     [Fact]
     public async Task Add_ShouldReturnBadRequest_WhenPostNotFound()
     {
-        var response = await Client.PostAsJsonAsync($"/api/post/{Guid.NewGuid().ToString()}/comments", _user.Id.ToString());
+        var response = await Client.PostAsJsonAsync($"{PostsBaseUrl}/{Guid.NewGuid().ToString()}/comments", _user.Id.ToString());
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
     }
     
@@ -84,21 +85,21 @@ public class PostCommentControllerTests(CustomWebApplicationFactoryFixture facto
             .Where(x => x.PostId == _post.Id)
             .FirstAsync();
         
-        var response = await Client.DeleteAsync($"/api/post/{_post.Id.ToString()}/comments/{firstFoundCommentOfPost.Id.ToString()}?userId={_user.Id.ToString()}");
+        var response = await Client.DeleteAsync($"{PostsBaseUrl}/{_post.Id.ToString()}/comments/{firstFoundCommentOfPost.Id.ToString()}?userId={_user.Id.ToString()}");
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
     }
 
     [Fact]
     public async Task Delete_ShouldReturnBadRequest_WhenPostNotFound()
     {
-        var response = await Client.DeleteAsync($"/api/post/{Guid.NewGuid().ToString()}/comments/{Guid.NewGuid().ToString()}?userId={_user.Id.ToString()}");
+        var response = await Client.DeleteAsync($"{PostsBaseUrl}/{Guid.NewGuid().ToString()}/comments/{Guid.NewGuid().ToString()}?userId={_user.Id.ToString()}");
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
     }
     
     [Fact]
     public async Task Delete_ShouldReturnBadRequest_WhenCommentNotFound()
     {
-        var response = await Client.DeleteAsync($"/api/post/{_post.Id.ToString()}/comments/{Guid.NewGuid().ToString()}?userId={_user.Id.ToString()}");
+        var response = await Client.DeleteAsync($"{PostsBaseUrl}/{_post.Id.ToString()}/comments/{Guid.NewGuid().ToString()}?userId={_user.Id.ToString()}");
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
     }
     

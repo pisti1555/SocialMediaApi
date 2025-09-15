@@ -1,5 +1,6 @@
 ﻿using Application.Common.Helpers;
 using Application.Contracts.Persistence.Repositories.Post;
+using Application.Contracts.Services;
 using Application.Responses;
 using AutoMapper;
 using Cortex.Mediator.Queries;
@@ -9,6 +10,7 @@ namespace Application.Requests.Posts.PostLike.Queries.GetLikesOfPost;
 
 public class GetLikesOfPostHandler(
     IPostRepository postRepository,
+    ICacheService cache,
     IMapper mapper
 ) : IQueryHandler<GetLikesOfPostQuery, List<PostLikeResponseDto>>
 {
@@ -17,7 +19,13 @@ public class GetLikesOfPostHandler(
         var guid = Parser.ParseIdOrThrow(request.PostId);
         if (!await postRepository.ExistsAsync(guid)) throw new NotFoundException("Post not found.");
         
+        var cacheKey = $"post-likes-{request.PostId}";
+        
+        var cachedList = await cache.GetAsync<List<PostLikeResponseDto>>(cacheKey, cancellationToken);
+        if (cachedList is not null) return cachedList;
+        
         var result = await postRepository.LikeRepository.GetAllOfPostAsync(guid);
+        await cache.SetAsync(cacheKey, result.ToList(), TimeSpan.FromMinutes(10), cancellationToken);
         
         return mapper.Map<List<PostLikeResponseDto>>(result);
     }

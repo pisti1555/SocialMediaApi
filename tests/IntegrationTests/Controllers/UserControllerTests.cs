@@ -13,12 +13,13 @@ namespace IntegrationTests.Controllers;
 
 public class UserControllerTests(CustomWebApplicationFactoryFixture factory) : BaseControllerTest(factory), IAsyncLifetime
 {
+    private const string BaseUrl = "/api/users";
     [Fact]
     public async Task Create_ShouldReturnCreatedResponse_WithLocationHeader_AndUserDto()
     {
         var command = new CreateUserCommand("test", "test@email.com", "test", "test", DateOnly.Parse("2000-01-01"));
         
-        var response = await Client.PostAsJsonAsync("/api/user", command);
+        var response = await Client.PostAsJsonAsync(BaseUrl, command);
         var result = await response.Content.ReadFromJsonAsync<UserResponseDto>();
         
         Assert.Equal(HttpStatusCode.Created, response.StatusCode);
@@ -44,7 +45,7 @@ public class UserControllerTests(CustomWebApplicationFactoryFixture factory) : B
         DbContext.Users.AddRange(AppUserDataFixture.GetUsers(25));
         await DbContext.SaveChangesAsync();
         
-        var response = await Client.GetAsync("/api/user?pageNumber=1&pageSize=19");
+        var response = await Client.GetAsync($"{BaseUrl}?pageNumber=1&pageSize=19");
         var result = await response.Content.ReadFromJsonAsync<PagedResult<UserResponseDto>>();
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
@@ -66,7 +67,7 @@ public class UserControllerTests(CustomWebApplicationFactoryFixture factory) : B
     [Fact]
     public async Task GetAllPaged_ShouldReturnEmptyList()
     {
-        var response = await Client.GetAsync("/api/user");
+        var response = await Client.GetAsync(BaseUrl);
         var result = await response.Content.ReadFromJsonAsync<PagedResult<UserResponseDto>>();
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
@@ -94,7 +95,7 @@ public class UserControllerTests(CustomWebApplicationFactoryFixture factory) : B
         var user = await DbContext.Users.FirstAsync();
         var userId = user.Id;
         
-        var response = await Client.GetAsync($"/api/user/{userId}");
+        var response = await Client.GetAsync($"{BaseUrl}/{userId}");
         var result = await response.Content.ReadFromJsonAsync<UserResponseDto>();
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
@@ -107,7 +108,7 @@ public class UserControllerTests(CustomWebApplicationFactoryFixture factory) : B
     [Fact]
     public async Task GetById_ShouldReturnNotFoundResponse()
     {
-        var response = await Client.GetAsync($"/api/user/{Guid.NewGuid().ToString()}");
+        var response = await Client.GetAsync($"{BaseUrl}/{Guid.NewGuid().ToString()}");
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
 

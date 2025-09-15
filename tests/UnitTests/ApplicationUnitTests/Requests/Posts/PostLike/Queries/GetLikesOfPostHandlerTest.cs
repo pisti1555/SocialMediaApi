@@ -1,101 +1,103 @@
-﻿using Application.Common.Mappings;
-using Application.Contracts.Persistence.Repositories.Post;
-using Application.Requests.Posts.PostLike.Queries.GetLikesOfPost;
-using ApplicationUnitTests.Common;
-using AutoMapper;
+﻿using Application.Requests.Posts.PostLike.Queries.GetLikesOfPost;
+using Application.Responses;
+using ApplicationUnitTests.Factories;
+using ApplicationUnitTests.Requests.Posts.Common;
 using Domain.Common.Exceptions.CustomExceptions;
-using Domain.Posts.Factories;
+using Domain.Posts;
 using Moq;
 
 namespace ApplicationUnitTests.Requests.Posts.PostLike.Queries;
 
-public class GetLikesOfPostHandlerTest
+public class GetLikesOfPostHandlerTest : BasePostHandlerTest
 {
-    private readonly Mock<IPostRepository> _postRepositoryMock;
-    private readonly Mock<IPostLikeRepository> _likeRepositoryMock;
+    
     private readonly GetLikesOfPostHandler _handler;
+    private readonly Post _post;
+    private readonly List<Domain.Posts.PostLike> _likes;
+    private readonly string _postLikesCacheKey;
+    private readonly List<PostLikeResponseDto> _cachedLikesOfPost;
 
     public GetLikesOfPostHandlerTest()
     {
-        _postRepositoryMock = new Mock<IPostRepository>();
-        _likeRepositoryMock = new Mock<IPostLikeRepository>();
-        
-        _postRepositoryMock.SetupGet(x => x.LikeRepository).Returns(_likeRepositoryMock.Object);
-        
-        var mapperConfig = new MapperConfiguration(cfg => cfg.AddProfile<PostProfile>());
-        mapperConfig.AssertConfigurationIsValid();
+        _handler = new GetLikesOfPostHandler(PostRepositoryMock.Object, CacheServiceMock.Object, Mapper);
 
-        var mapper = mapperConfig.CreateMapper();
-
-        _handler = new GetLikesOfPostHandler(_postRepositoryMock.Object, mapper);
+        _post = TestDataFactory.CreatePost(null, true);
+        _likes = TestDataFactory.CreateLikes(5, _post, null, true);
+        
+        _postLikesCacheKey = $"post-likes-{_post.Id.ToString()}";
+        _cachedLikesOfPost = Mapper.Map<List<PostLikeResponseDto>>(_likes);
     }
+    
+    private GetLikesOfPostQuery CreateQuery() => new(_post.Id.ToString());
 
     [Fact]
-    public async Task Handle_ShouldReturnOkList()
+    public async Task Handle_WhenNoCache_ShouldReturnOkListFromDatabase()
     {
         // Arrange
-        var user = TestObjects.CreateTestUser();
-        var post = TestObjects.CreateTestPost(user);
-        var like = PostLikeFactory.Create(user, post);
-        var likes = new List<Domain.Posts.PostLike> { like };
-        
-        var query = new GetLikesOfPostQuery(post.Id.ToString());
-        
-        _postRepositoryMock.Setup(x => x.ExistsAsync(post.Id)).ReturnsAsync(true);
-        _likeRepositoryMock.Setup(x => x.GetAllOfPostAsync(post.Id)).ReturnsAsync(likes);
+        SetupPostExists(_post.Id, true);
+        SetupCache<List<PostLikeResponseDto>?>(_postLikesCacheKey, null);
+        SetupLikes(_likes, _post.Id);
         
         // Act
-        var result = await _handler.Handle(query, CancellationToken.None);
+        var result = await _handler.Handle(CreateQuery(), CancellationToken.None);
         
         // Assert
-        _postRepositoryMock.Verify(x => x.ExistsAsync(post.Id), Times.Once);
-        _likeRepositoryMock.Verify(x => x.GetAllOfPostAsync(post.Id), Times.Once);
-        Assert.Single(result);
-        Assert.Equal(like.Id, result[0].Id);
-        Assert.Equal(like.UserId, result[0].UserId);
-        Assert.Equal(like.PostId, result[0].PostId);
+        PostRepositoryMock.Verify(x => x.ExistsAsync(_post.Id), Times.Once);
+        CacheServiceMock.Verify(x => x.GetAsync<List<PostLikeResponseDto>>(_postLikesCacheKey, CancellationToken.None), Times.Once);
+        LikeRepositoryMock.Verify(x => x.GetAllOfPostAsync(_post.Id), Times.Once);
+        
+        AssertLikesMatch(_likes, result);
     }
     
     [Fact]
-    public async Task Handle_ShouldReturnEmptyList()
+    public async Task Handle_WhenCacheExists_ShouldReturnOkListFromCache()
     {
         // Arrange
-        var user = TestObjects.CreateTestUser();
-        var post = TestObjects.CreateTestPost(user);
-        
-        var query = new GetLikesOfPostQuery(post.Id.ToString());
-        
-        _postRepositoryMock.Setup(x => x.ExistsAsync(post.Id)).ReturnsAsync(true);
-        _likeRepositoryMock.Setup(x => x.GetAllOfPostAsync(post.Id)).ReturnsAsync(new List<Domain.Posts.PostLike>());
+        SetupPostExists(_post.Id, true);
+        SetupCache<List<PostLikeResponseDto>?>(_postLikesCacheKey, _cachedLikesOfPost);
         
         // Act
-        var result = await _handler.Handle(query, CancellationToken.None);
+        var result = await _handler.Handle(CreateQuery(), CancellationToken.None);
         
         // Assert
-        _postRepositoryMock.Verify(x => x.ExistsAsync(post.Id), Times.Once);
-        _likeRepositoryMock.Verify(x => x.GetAllOfPostAsync(post.Id), Times.Once);
+        PostRepositoryMock.Verify(x => x.ExistsAsync(_post.Id), Times.Once);
+        CacheServiceMock.Verify(x => x.GetAsync<List<PostLikeResponseDto>>(_postLikesCacheKey, CancellationToken.None), Times.Once);
+        LikeRepositoryMock.Verify(x => x.GetAllOfPostAsync(_post.Id), Times.Never);
+        
+        AssertLikesMatch(_likes, result);
+    }
+    
+    [Fact]
+    public async Task Handle_WhenNoLikes_ShouldReturnEmptyList()
+    {
+        // Arrange
+        SetupPostExists(_post.Id, true);
+        SetupCache<List<PostLikeResponseDto>?>(_postLikesCacheKey, null);
+        SetupLikes([], _post.Id);
+        
+        // Act
+        var result = await _handler.Handle(CreateQuery(), CancellationToken.None);
+        
+        // Assert
+        PostRepositoryMock.Verify(x => x.ExistsAsync(_post.Id), Times.Once);
+        CacheServiceMock.Verify(x => x.GetAsync<List<PostLikeResponseDto>>(_postLikesCacheKey, CancellationToken.None), Times.Once);
+        LikeRepositoryMock.Verify(x => x.GetAllOfPostAsync(_post.Id), Times.Once);
+        
         Assert.NotNull(result);
         Assert.Empty(result);
     }
     
     [Fact]
-    public async Task Handle_ShouldThrowNotFoundException_PostNotFound()
+    public async Task Handle_WhenNoPost_ShouldThrowNotFoundException()
     {
         // Arrange
-        var user = TestObjects.CreateTestUser();
-        var post = TestObjects.CreateTestPost(user);
-        var like = PostLikeFactory.Create(user, post);
-        var likes = new List<Domain.Posts.PostLike> { like };
-        
-        var query = new GetLikesOfPostQuery(post.Id.ToString());
-        
-        _postRepositoryMock.Setup(x => x.ExistsAsync(post.Id)).ReturnsAsync(false);
-        _likeRepositoryMock.Setup(x => x.GetAllOfPostAsync(post.Id)).ReturnsAsync(likes);
+        SetupPostExists(_post.Id, false);
         
         // Act & Assert
-        await Assert.ThrowsAsync<NotFoundException>(() => _handler.Handle(query, CancellationToken.None));
+        await Assert.ThrowsAsync<NotFoundException>(() => _handler.Handle(CreateQuery(), CancellationToken.None));
 
-        _postRepositoryMock.Verify(x => x.ExistsAsync(post.Id), Times.Once);
-        _likeRepositoryMock.Verify(x => x.GetAllOfPostAsync(It.IsAny<Guid>()), Times.Never);
+        PostRepositoryMock.Verify(x => x.ExistsAsync(_post.Id), Times.Once);
+        CacheServiceMock.Verify(x => x.GetAsync<List<PostLikeResponseDto>>(It.IsAny<string>(), CancellationToken.None), Times.Never);
+        LikeRepositoryMock.Verify(x => x.GetAllOfPostAsync(It.IsAny<Guid>()), Times.Never);
     }
 }

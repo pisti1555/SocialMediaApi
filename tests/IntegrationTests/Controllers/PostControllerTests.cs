@@ -14,6 +14,7 @@ namespace IntegrationTests.Controllers;
 
 public class PostControllerTests(CustomWebApplicationFactoryFixture factory) : BaseControllerTest(factory), IAsyncLifetime
 {
+    private const string BaseUrl = "/api/posts";
     private AppUser _user = null!;
     
     [Fact]
@@ -21,7 +22,7 @@ public class PostControllerTests(CustomWebApplicationFactoryFixture factory) : B
     {
         var dto = new CreatePostDto("Test text", _user.Id.ToString());
         
-        var response = await Client.PostAsJsonAsync("/api/post", dto);
+        var response = await Client.PostAsJsonAsync($"{BaseUrl}", dto);
         var result = await response.Content.ReadFromJsonAsync<PostResponseDto>();
         
         Assert.Equal(HttpStatusCode.Created, response.StatusCode);
@@ -50,7 +51,7 @@ public class PostControllerTests(CustomWebApplicationFactoryFixture factory) : B
     public async Task Create_ShouldReturnBadRequestResponse_WhenUserNotFound()
     {
         var dto = new CreatePostDto("Test text", Guid.NewGuid().ToString());
-        var response = await Client.PostAsJsonAsync("/api/post", dto);
+        var response = await Client.PostAsJsonAsync(BaseUrl, dto);
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
     }
 
@@ -61,14 +62,14 @@ public class PostControllerTests(CustomWebApplicationFactoryFixture factory) : B
         DbContext.Posts.Add(post);
         await DbContext.SaveChangesAsync();
         
-        var response = await Client.DeleteAsync($"/api/post/{post.Id}");
+        var response = await Client.DeleteAsync($"{BaseUrl}/{post.Id}");
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
     }
     
     [Fact]
     public async Task Delete_ShouldReturnBadRequestResponse_WhenPostNotFound()
     {
-        var response = await Client.DeleteAsync($"/api/post/{Guid.NewGuid().ToString()}");
+        var response = await Client.DeleteAsync($"{BaseUrl}/{Guid.NewGuid().ToString()}");
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
     }
     
@@ -79,7 +80,7 @@ public class PostControllerTests(CustomWebApplicationFactoryFixture factory) : B
         DbContext.Posts.Add(post);
         await DbContext.SaveChangesAsync();
         
-        var response = await Client.GetAsync($"/api/post/{post.Id}");
+        var response = await Client.GetAsync($"{BaseUrl}/{post.Id}");
         var result = await response.Content.ReadFromJsonAsync<PostResponseDto>();
         
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
@@ -94,7 +95,7 @@ public class PostControllerTests(CustomWebApplicationFactoryFixture factory) : B
     [Fact]
     public async Task GetById_ShouldReturnNotFoundResponse()
     {
-        var response = await Client.GetAsync($"/api/post/{Guid.NewGuid().ToString()}");
+        var response = await Client.GetAsync($"{BaseUrl}/{Guid.NewGuid().ToString()}");
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
     
@@ -105,7 +106,7 @@ public class PostControllerTests(CustomWebApplicationFactoryFixture factory) : B
         DbContext.Posts.Add(post);
         await DbContext.SaveChangesAsync();
         
-        var response = await Client.GetAsync("/api/post?pageNumber=1&pageSize=10");
+        var response = await Client.GetAsync($"{BaseUrl}?pageNumber=1&pageSize=10");
         var result = await response.Content.ReadFromJsonAsync<PagedResult<PostResponseDto>>();
         
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
@@ -126,7 +127,7 @@ public class PostControllerTests(CustomWebApplicationFactoryFixture factory) : B
     [Fact]
     public async Task GetAllPaged_ShouldReturnEmptyList()
     {
-        var response = await Client.GetAsync("/api/post?pageNumber=1&pageSize=10");
+        var response = await Client.GetAsync($"{BaseUrl}?pageNumber=1&pageSize=10");
         var result = await response.Content.ReadFromJsonAsync<PagedResult<PostResponseDto>>();
         
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);

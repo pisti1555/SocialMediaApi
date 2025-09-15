@@ -19,6 +19,8 @@ public class PostComment : EntityBase
     {
         Text = text;
         User = user;
+        UserId = user.Id;
         Post = post;
+        PostId = post.Id;
     }
 }

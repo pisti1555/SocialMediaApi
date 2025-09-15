@@ -1,11 +1,11 @@
 ﻿using Application.Common.Mappings;
 using AutoMapper;
 
-namespace ApplicationUnitTests.Common;
+namespace ApplicationUnitTests.Helpers;
 
-internal static class TestMapperSetup
+internal static class MapperHelper
 {
-    internal static IMapper SetupMapper()
+    internal static IMapper GetMapper()
     {
         var mapperConfig = new MapperConfiguration(cfg =>
         {

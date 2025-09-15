@@ -25,7 +25,7 @@ public class CreateUserHandler(
         
         if (!await userRepository.SaveChangesAsync())
             throw new BadRequestException("User could not be created.");
-        
+
         return mapper.Map<UserResponseDto>(user);
     }
 

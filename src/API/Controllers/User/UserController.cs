@@ -1,4 +1,5 @@
-﻿using API.DTOs.Params;
+﻿using API.Controllers.Common;
+using API.DTOs.Params;
 using API.Extensions;
 using Application.Common.Pagination;
 using Application.Requests.Users.Root.Commands.CreateUser;
@@ -8,8 +9,9 @@ using Application.Responses;
 using Cortex.Mediator;
 using Microsoft.AspNetCore.Mvc;
 
-namespace API.Controllers;
+namespace API.Controllers.User;
 
+[Route("api/users")]
 public class UserController(IMediator mediator) : BaseApiController
 {
     [HttpPost]
