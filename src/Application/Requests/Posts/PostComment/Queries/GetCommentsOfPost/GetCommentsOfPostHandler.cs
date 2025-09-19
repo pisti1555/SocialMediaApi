@@ -26,8 +26,10 @@ public class GetCommentsOfPostHandler(
         if (cachedList is not null) return cachedList;
 
         var comments = await postRepository.CommentRepository.GetAllCommentOfPostAsync(guid);
-        await cache.SetAsync(cacheKey, comments.ToList(), TimeSpan.FromMinutes(10), cancellationToken);
+        var commentResponseList = mapper.Map<List<PostCommentResponseDto>>(comments);
+        
+        await cache.SetAsync(cacheKey, commentResponseList, TimeSpan.FromMinutes(10), cancellationToken);
 
-        return mapper.Map<List<PostCommentResponseDto>>(comments);
+        return commentResponseList;
     }
 }

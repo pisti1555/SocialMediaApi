@@ -60,11 +60,8 @@ jobs:
         with:
           name: build-output
 
-      - name: Run domain unit tests
-        run: dotnet test tests/UnitTests/DomainUnitTests/DomainUnitTests.csproj -c Release --no-build
-
-      - name: Run application unit tests
-        run: dotnet test tests/UnitTests/ApplicationUnitTests/ApplicationUnitTests.csproj -c Release --no-build
+      - name: Run unit tests
+        run: dotnet test tests/UnitTests/UnitTests.csproj -c Release --no-build
   
   # Run integration tests
   integration-tests:

@@ -5,7 +5,6 @@ using Application.Responses;
 using AutoMapper;
 using Cortex.Mediator.Queries;
 using Domain.Common.Exceptions.CustomExceptions;
-using Domain.Users;
 
 namespace Application.Requests.Users.Root.Queries.GetById;
 
@@ -20,14 +19,16 @@ public class GetUserByIdHandler(
         
         var cacheKey = $"user-{request.Id}";
 
-        var cachedUser = await cache.GetAsync<AppUser>(cacheKey, cancellationToken);
-        if (cachedUser is not null) return mapper.Map<UserResponseDto>(cachedUser);
+        var cachedUser = await cache.GetAsync<UserResponseDto>(cacheKey, cancellationToken);
+        if (cachedUser is not null) return cachedUser;
         
         var user = await userRepository.GetByIdAsync(guid);
         if (user is null) throw new NotFoundException("User not found.");
         
-        await cache.SetAsync(cacheKey, user, cancellationToken);
+        var userResponseDto = mapper.Map<UserResponseDto>(user);
         
-        return mapper.Map<UserResponseDto>(user);
+        await cache.SetAsync(cacheKey, userResponseDto, cancellationToken);
+        
+        return userResponseDto;
     }
 }

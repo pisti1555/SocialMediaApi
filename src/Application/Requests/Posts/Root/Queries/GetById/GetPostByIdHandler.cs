@@ -5,7 +5,6 @@ using Application.Responses;
 using AutoMapper;
 using Cortex.Mediator.Queries;
 using Domain.Common.Exceptions.CustomExceptions;
-using Domain.Posts;
 
 namespace Application.Requests.Posts.Root.Queries.GetById;
 
@@ -20,14 +19,16 @@ public class GetPostByIdHandler(
         
         var cacheKey = $"post-{request.Id}";
         
-        var cachedPost = await cache.GetAsync<Post>(cacheKey, cancellationToken);
-        if (cachedPost is not null) return mapper.Map<PostResponseDto>(cachedPost);
+        var cachedPost = await cache.GetAsync<PostResponseDto>(cacheKey, cancellationToken);
+        if (cachedPost is not null) return cachedPost;
         
         var post = await postRepository.GetByIdAsync(guid);
         if (post is null) throw new NotFoundException("Post not found.");
         
-        await cache.SetAsync(cacheKey, post, TimeSpan.FromMinutes(10), cancellationToken);
+        var postResponseDto = mapper.Map<PostResponseDto>(post);
         
-        return mapper.Map<PostResponseDto>(post);
+        await cache.SetAsync(cacheKey, postResponseDto, TimeSpan.FromMinutes(10), cancellationToken);
+        
+        return postResponseDto;
     }
 }

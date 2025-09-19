@@ -20,13 +20,14 @@ public class GetLikesOfPostHandler(
         if (!await postRepository.ExistsAsync(guid)) throw new NotFoundException("Post not found.");
         
         var cacheKey = $"post-likes-{request.PostId}";
-        
         var cachedList = await cache.GetAsync<List<PostLikeResponseDto>>(cacheKey, cancellationToken);
         if (cachedList is not null) return cachedList;
         
         var result = await postRepository.LikeRepository.GetAllOfPostAsync(guid);
-        await cache.SetAsync(cacheKey, result.ToList(), TimeSpan.FromMinutes(10), cancellationToken);
+        var likeResponseList = mapper.Map<List<PostLikeResponseDto>>(result);
         
-        return mapper.Map<List<PostLikeResponseDto>>(result);
+        await cache.SetAsync(cacheKey, likeResponseList, TimeSpan.FromMinutes(10), cancellationToken);
+        
+        return likeResponseList;
     }
 }

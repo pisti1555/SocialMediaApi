@@ -14,8 +14,9 @@ namespace IntegrationTests.Controllers;
 public class UserControllerTests(CustomWebApplicationFactoryFixture factory) : BaseControllerTest(factory), IAsyncLifetime
 {
     private const string BaseUrl = "/api/users";
+    
     [Fact]
-    public async Task Create_ShouldReturnCreatedResponse_WithLocationHeader_AndUserDto()
+    public async Task Create_WhenValidRequest_ShouldCreateAndCacheUser_ThenReturnCreatedResponse_WithLocationHeader_AndUserDto()
     {
         var command = new CreateUserCommand("test", "test@email.com", "test", "test", DateOnly.Parse("2000-01-01"));
         
@@ -27,6 +28,9 @@ public class UserControllerTests(CustomWebApplicationFactoryFixture factory) : B
         
         var firstFoundUserInDb = await DbContext.Users.FirstAsync();
         var locationHeaderContent = response.Headers.Location?.ToString();
+        
+        var cachedUser = await Cache.GetAsync<UserResponseDto>($"user-{firstFoundUserInDb.Id.ToString()}");
+        Assert.NotNull(cachedUser);
         
         Assert.Equal(firstFoundUserInDb.Id.ToString(), locationHeaderContent?.Split('/').Last());
         Assert.NotNull(result);
@@ -40,13 +44,45 @@ public class UserControllerTests(CustomWebApplicationFactoryFixture factory) : B
     }
     
     [Fact]
-    public async Task GetAllPaged_ShouldReturnListWith19Users()
+    public async Task GetById_ShouldCacheUser_ThenReturnUserResponseDto()
+    {
+        DbContext.Users.AddRange(AppUserDataFixture.GetUser());
+        await DbContext.SaveChangesAsync();
+        
+        var user = await DbContext.Users.FirstAsync();
+        var userId = user.Id;
+        
+        var response = await Client.GetAsync($"{BaseUrl}/{userId}");
+        var result = await response.Content.ReadFromJsonAsync<UserResponseDto>();
+        
+        var cachedUser = await Cache.GetAsync<UserResponseDto>($"user-{userId.ToString()}");
+        Assert.NotNull(cachedUser);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.NotNull(result);
+        Assert.Equal(userId, result.Id);
+        Assert.Equal(user.UserName, result.UserName);
+        Assert.Equal(user.Email, result.Email);
+    }
+    
+    [Fact]
+    public async Task GetById_WhenUserNotFound_ShouldReturnNotFoundResponse()
+    {
+        var response = await Client.GetAsync($"{BaseUrl}/{Guid.NewGuid().ToString()}");
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+    }
+    
+    [Fact]
+    public async Task GetAllPaged_WhenRequestedPage1AndPageSize19_ShouldCacheResult_ThenReturnListWith19Users()
     {
         DbContext.Users.AddRange(AppUserDataFixture.GetUsers(25));
         await DbContext.SaveChangesAsync();
         
         var response = await Client.GetAsync($"{BaseUrl}?pageNumber=1&pageSize=19");
         var result = await response.Content.ReadFromJsonAsync<PagedResult<UserResponseDto>>();
+        
+        var cachedResult = await Cache.GetAsync<PagedResult<UserResponseDto>>("users-1-19");
+        Assert.NotNull(cachedResult);
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         Assert.True(response.Headers.Contains("X-Current-Page"));
@@ -65,10 +101,13 @@ public class UserControllerTests(CustomWebApplicationFactoryFixture factory) : B
     }
     
     [Fact]
-    public async Task GetAllPaged_ShouldReturnEmptyList()
+    public async Task GetAllPaged_WhenNoUserFound_ShouldCacheResult_ThenReturnEmptyList()
     {
         var response = await Client.GetAsync(BaseUrl);
         var result = await response.Content.ReadFromJsonAsync<PagedResult<UserResponseDto>>();
+        
+        var cachedResult = await Cache.GetAsync<PagedResult<UserResponseDto>>("users-1-10");
+        Assert.NotNull(cachedResult);
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         Assert.True(response.Headers.Contains("X-Current-Page"));
@@ -84,32 +123,6 @@ public class UserControllerTests(CustomWebApplicationFactoryFixture factory) : B
         Assert.Equal(0, result.TotalPages);
         
         Assert.Empty(result.Items);
-    }
-
-    [Fact]
-    public async Task GetById_ShouldReturnUserResponseDto()
-    {
-        DbContext.Users.AddRange(AppUserDataFixture.GetUser());
-        await DbContext.SaveChangesAsync();
-        
-        var user = await DbContext.Users.FirstAsync();
-        var userId = user.Id;
-        
-        var response = await Client.GetAsync($"{BaseUrl}/{userId}");
-        var result = await response.Content.ReadFromJsonAsync<UserResponseDto>();
-
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        Assert.NotNull(result);
-        Assert.Equal(userId, result.Id);
-        Assert.Equal(user.UserName, result.UserName);
-        Assert.Equal(user.Email, result.Email);
-    }
-    
-    [Fact]
-    public async Task GetById_ShouldReturnNotFoundResponse()
-    {
-        var response = await Client.GetAsync($"{BaseUrl}/{Guid.NewGuid().ToString()}");
-        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
 
     public async Task InitializeAsync()
