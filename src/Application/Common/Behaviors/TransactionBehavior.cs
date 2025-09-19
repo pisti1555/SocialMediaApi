@@ -1,4 +1,4 @@
-﻿using Application.Common.Interfaces.Persistence;
+﻿using Application.Contracts.Persistence.Cortex.Mediator;
 using Cortex.Mediator.Commands;
 
 namespace Application.Common.Behaviors;

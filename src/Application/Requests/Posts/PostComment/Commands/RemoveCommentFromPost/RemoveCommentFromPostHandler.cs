@@ -1,12 +1,16 @@
 ﻿using Application.Common.Helpers;
-using Application.Common.Interfaces.Repositories.Post;
+using Application.Contracts.Persistence.Repositories.Post;
+using Application.Contracts.Services;
 using Cortex.Mediator;
 using Cortex.Mediator.Commands;
 using Domain.Common.Exceptions.CustomExceptions;
 
 namespace Application.Requests.Posts.PostComment.Commands.RemoveCommentFromPost;
 
-public class RemoveCommentFromPostHandler(IPostRepository postRepository) : ICommandHandler<RemoveCommentFromPostCommand, Unit>
+public class RemoveCommentFromPostHandler(
+    IPostRepository postRepository,
+    ICacheService cache
+    ) : ICommandHandler<RemoveCommentFromPostCommand, Unit>
 {
     public async Task<Unit> Handle(RemoveCommentFromPostCommand request, CancellationToken cancellationToken)
     {
@@ -30,6 +34,8 @@ public class RemoveCommentFromPostHandler(IPostRepository postRepository) : ICom
 
         if (!await postRepository.SaveChangesAsync())
             throw new BadRequestException("Comment could not be deleted.");
+        
+        await cache.RemoveAsync($"post-comments-{postGuid.ToString()}", cancellationToken);
         
         return Unit.Value;
     }

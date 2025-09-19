@@ -1,5 +1,6 @@
 ﻿using Application.Common.Helpers;
-using Application.Common.Interfaces.Repositories.Post;
+using Application.Contracts.Persistence.Repositories.Post;
+using Application.Contracts.Services;
 using Cortex.Mediator;
 using Cortex.Mediator.Commands;
 using Domain.Common.Exceptions.CustomExceptions;
@@ -7,7 +8,8 @@ using Domain.Common.Exceptions.CustomExceptions;
 namespace Application.Requests.Posts.Root.Commands.DeletePost;
 
 public class DeletePostHandler(
-    IPostRepository postRepository
+    IPostRepository postRepository,
+    ICacheService cache
 ) : ICommandHandler<DeletePostCommand, Unit>
 {
     public async Task<Unit> Handle(DeletePostCommand request, CancellationToken cancellationToken)
@@ -20,6 +22,8 @@ public class DeletePostHandler(
 
         if (!await postRepository.SaveChangesAsync())
             throw new BadRequestException("Post could not be deleted.");
+        
+        await cache.RemoveAsync($"post-{guid.ToString()}", cancellationToken);
         
         return Unit.Value;
     }

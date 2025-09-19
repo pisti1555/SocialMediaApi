@@ -14,91 +14,120 @@ namespace IntegrationTests.Controllers;
 
 public class PostCommentControllerTests(CustomWebApplicationFactoryFixture factory) : BaseControllerTest(factory), IAsyncLifetime
 {
+    private const string PostsBaseUrl = "/api/posts";
     private AppUser _user = null!;
     private Post _post = null!;
-
-    [Fact]
-    public async Task GetCommentsOfPost_ShouldReturnOkList()
+    
+    private static string PostCommentsCacheKey(Guid postId) => $"post-comments-{postId.ToString()}";
+    
+    private async Task<PostComment> AddCommentToDbAsync(PostComment comment)
     {
-        var comment = PostCommentDataFixture.GetPostComment(_user, _post);
         DbContext.PostComments.Add(comment);
         await DbContext.SaveChangesAsync();
+        return comment;
+    }
+    
+    private static void AssertCommentsMatch(List<PostComment> expected, List<PostCommentResponseDto>? actual)
+    {
+        Assert.NotNull(actual);
+        Assert.Equal(expected.Count, actual.Count);
+
+        for (var i = 0; i < expected.Count; i++)
+        {
+            Assert.Equal(expected[i].Id, actual[i].Id);
+            Assert.Equal(expected[i].User.Id, actual[i].UserId);
+            Assert.Equal(expected[i].Post.Id, actual[i].PostId);
+            Assert.Equal(expected[i].User.UserName, actual[i].UserName);
+            Assert.Equal(expected[i].Text, actual[i].Text);
+        }
+    }
+
+    [Fact]
+    public async Task GetCommentsOfPost_ShouldCacheResult_ThenReturnFullList()
+    {
+        var comment = await AddCommentToDbAsync(PostCommentDataFixture.GetPostComment(_user, _post));
         
-        var response = await Client.GetAsync($"/api/post/{_post.Id}/comments");
+        var response = await Client.GetAsync($"{PostsBaseUrl}/{_post.Id}/comments");
         var result = await response.Content.ReadFromJsonAsync<List<PostCommentResponseDto>>();
         
+        var cache = await Cache.GetAsync<List<PostCommentResponseDto>?>(PostCommentsCacheKey(_post.Id));
+        Assert.NotNull(cache);
+        
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        Assert.NotNull(result);
-        Assert.Single(result);
-        Assert.Equal(comment.Id, result[0].Id);
-        Assert.Equal(comment.UserId, result[0].UserId);
-        Assert.Equal(comment.PostId, result[0].PostId);
+        AssertCommentsMatch(comment.Post.Comments.ToList(), result);
+        
+        await Cache.RemoveAsync(PostCommentsCacheKey(_post.Id));
     }
     
     [Fact]
-    public async Task GetCommentsOfPost_ShouldReturnEmptyList()
+    public async Task GetCommentsOfPost_WhenNoComments_ShouldCacheResult_ThenReturnEmptyList()
     {
-        var response = await Client.GetAsync($"/api/post/{_post.Id}/comments");
+        var response = await Client.GetAsync($"{PostsBaseUrl}/{_post.Id}/comments");
         var result = await response.Content.ReadFromJsonAsync<List<PostCommentResponseDto>>();
+        
+        var cache = await Cache.GetAsync<List<PostCommentResponseDto>?>(PostCommentsCacheKey(_post.Id));
+        Assert.NotNull(cache);
         
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         Assert.NotNull(result);
         Assert.Empty(result);
+        
+        await Cache.RemoveAsync(PostCommentsCacheKey(_post.Id));
     }
 
     [Fact]
-    public async Task Add_ShouldReturnOkResponse_WithPostCommentDto()
+    public async Task AddComment_ShouldAddComment_ThenReturnPostCommentDto()
     {
         var dto = new AddCommentToPostDto(_user.Id.ToString(), "Test text");
         
-        var response = await Client.PostAsJsonAsync($"/api/post/{_post.Id}/comments", dto);
+        var response = await Client.PostAsJsonAsync($"{PostsBaseUrl}/{_post.Id}/comments", dto);
         var result = await response.Content.ReadFromJsonAsync<PostCommentResponseDto>();
         
-        var firstFoundCommentOfPost = await DbContext.PostComments
+        var commentInDb = await DbContext.PostComments
             .Where(x => x.PostId == _post.Id)
+            .Include(x => x.User)
+            .Include(x => x.Post)
             .FirstAsync();
         
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         Assert.NotNull(result);
-        Assert.Equal(firstFoundCommentOfPost.Id, result.Id);
-        Assert.Equal(firstFoundCommentOfPost.UserId, result.UserId);
-        Assert.Equal(firstFoundCommentOfPost.PostId, result.PostId);
-        Assert.Equal(firstFoundCommentOfPost.Text, result.Text);
+        Assert.Equal(commentInDb.Id, result.Id);
+        Assert.Equal(commentInDb.User.Id, result.UserId);
+        Assert.Equal(commentInDb.Post.Id, result.PostId);
+        Assert.Equal(commentInDb.Text, result.Text);
     }
     
     [Fact]
-    public async Task Add_ShouldReturnBadRequest_WhenPostNotFound()
+    public async Task AddComment_WhenPostNotFound_ShouldReturnBadRequest()
     {
-        var response = await Client.PostAsJsonAsync($"/api/post/{Guid.NewGuid().ToString()}/comments", _user.Id.ToString());
+        var response = await Client.PostAsJsonAsync($"{PostsBaseUrl}/{Guid.NewGuid().ToString()}/comments", _user.Id.ToString());
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
     }
     
     [Fact]
-    public async Task Delete_ShouldReturnOk()
+    public async Task RemoveComment_ShouldReturnOk()
     {
-        var comment = PostCommentDataFixture.GetPostComment(_user, _post);
-        DbContext.PostComments.Add(comment);
-        await DbContext.SaveChangesAsync();
+        await AddCommentToDbAsync(PostCommentDataFixture.GetPostComment(_user, _post));
         
-        var firstFoundCommentOfPost = await DbContext.PostComments
+        var comment = await DbContext.PostComments
             .Where(x => x.PostId == _post.Id)
             .FirstAsync();
         
-        var response = await Client.DeleteAsync($"/api/post/{_post.Id.ToString()}/comments/{firstFoundCommentOfPost.Id.ToString()}?userId={_user.Id.ToString()}");
+        var response = await Client.DeleteAsync($"{PostsBaseUrl}/{_post.Id.ToString()}/comments/{comment.Id.ToString()}?userId={_user.Id.ToString()}");
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
     }
 
     [Fact]
-    public async Task Delete_ShouldReturnBadRequest_WhenPostNotFound()
+    public async Task RemoveComment_WhenPostNotFound_ShouldReturnBadRequest()
     {
-        var response = await Client.DeleteAsync($"/api/post/{Guid.NewGuid().ToString()}/comments/{Guid.NewGuid().ToString()}?userId={_user.Id.ToString()}");
+        var response = await Client.DeleteAsync($"{PostsBaseUrl}/{Guid.NewGuid().ToString()}/comments/{Guid.NewGuid().ToString()}?userId={_user.Id.ToString()}");
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
     }
     
     [Fact]
-    public async Task Delete_ShouldReturnBadRequest_WhenCommentNotFound()
+    public async Task RemoveComment_WhenCommentNotFound_ShouldReturnBadRequest()
     {
-        var response = await Client.DeleteAsync($"/api/post/{_post.Id.ToString()}/comments/{Guid.NewGuid().ToString()}?userId={_user.Id.ToString()}");
+        var response = await Client.DeleteAsync($"{PostsBaseUrl}/{_post.Id.ToString()}/comments/{Guid.NewGuid().ToString()}?userId={_user.Id.ToString()}");
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
     }
     

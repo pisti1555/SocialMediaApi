@@ -9,11 +9,37 @@ on:
       - main
 
 jobs:
-  # Build and set version
-  build:
+  # Build, test and set version
+  build-test-version:
     runs-on: ubuntu-latest
     outputs:
       version: ${{ steps.versioning.outputs.VERSION }}
+      
+    env:
+      DOTNET_ENVIRONMENT: Development
+      ConnectionStrings__Database: "Host=postgres;Port=5432;Database=social_media;Username=postgres;Password=postgres"
+      ConnectionStrings__Redis: "Host=redis;Port=6379"
+
+    services:
+      postgres:
+        image: postgres:17.6
+        env:
+          POSTGRES_DB: social_media
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+      redis:
+        image: redis:8.2.1
+        ports:
+          - 6379:6379
+        options: --health-cmd "redis-cli ping" --health-interval 10s --health-timeout 5s --health-retries 5
+    
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -28,6 +54,9 @@ jobs:
 
       - name: Build
         run: dotnet build SocialMediaApi.sln --no-restore -c Release
+        
+      - name: Run tests
+        run: dotnet test -c Release --no-restore --verbosity normal
 
       - name: Versioning
         id: versioning
@@ -35,71 +64,20 @@ jobs:
           version_prefix=$(grep -oPm1 "(?<=<VersionPrefix>)[^<]+" src/API/API.csproj)
           version="$version_prefix.${{ github.run_number }}"
           echo "VERSION=$version" >> $GITHUB_OUTPUT
-          
-      - name: Upload build artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: build-output
-          path: |
-            **/bin/**
-            **/obj/**
-          
-  # Run unit tests
-  unit-tests:
-    runs-on: ubuntu-latest
-    needs: build
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup .NET
-        uses: actions/setup-dotnet@v4
-        with:
-          dotnet-version: '9.0.x'
-
-      - name: Download build artifacts
-        uses: actions/download-artifact@v4
-        with:
-          name: build-output
-
-      - name: Run domain unit tests
-        run: dotnet test tests/UnitTests/DomainUnitTests/DomainUnitTests.csproj -c Release --no-build
-
-      - name: Run application unit tests
-        run: dotnet test tests/UnitTests/ApplicationUnitTests/ApplicationUnitTests.csproj -c Release --no-build
-        
-  # Run integration tests
-  integration-tests:
-    runs-on: ubuntu-latest
-    needs: build
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup .NET
-        uses: actions/setup-dotnet@v4
-        with:
-          dotnet-version: '9.0.x'
-
-      - name: Download build artifacts
-        uses: actions/download-artifact@v4
-        with:
-          name: build-output
-
-      - name: Run integration tests
-        run: dotnet test tests/IntegrationTests/IntegrationTests.csproj -c Release --no-build
         
   # Build and push docker image
   docker:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     needs:
-      - build
-      - unit-tests
-      - integration-tests
+      - build-test-version
     permissions:
       contents: read
       packages: write
+      
+    env:
+      DOTNET_ENVIRONMENT: Production
+      
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -114,7 +92,7 @@ jobs:
       - name: Build & Push Docker image
         run: |
           IMAGE_NAME=ghcr.io/${{ github.actor }}/socialmedia-api
-          VERSION=${{ needs.build.outputs.version }}
+          VERSION=${{ needs.build-test-version.outputs.version }}
 
           docker build -t $IMAGE_NAME:$VERSION -t $IMAGE_NAME:latest .
           docker push $IMAGE_NAME:$VERSION

@@ -1,4 +1,5 @@
-﻿using Application.Common.Interfaces.Repositories.AppUser;
+﻿using Application.Contracts.Persistence.Repositories.AppUser;
+using Application.Contracts.Services;
 using Application.Responses;
 using AutoMapper;
 using Cortex.Mediator.Commands;
@@ -9,6 +10,7 @@ namespace Application.Requests.Users.Root.Commands.CreateUser;
 
 public class CreateUserHandler(
     IAppUserRepository userRepository,
+    ICacheService cache,
     IMapper mapper
 ) : ICommandHandler<CreateUserCommand, UserResponseDto>
 {
@@ -26,7 +28,11 @@ public class CreateUserHandler(
         if (!await userRepository.SaveChangesAsync())
             throw new BadRequestException("User could not be created.");
         
-        return mapper.Map<UserResponseDto>(user);
+        var userResponseDto = mapper.Map<UserResponseDto>(user);
+        
+        await cache.SetAsync($"user-{user.Id.ToString()}", userResponseDto, cancellationToken);
+
+        return userResponseDto;
     }
 
     private async Task ThrowIfUserAlreadyExistsByUsername(string username)

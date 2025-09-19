@@ -3,6 +3,7 @@ using System.Net.Http.Json;
 using API.DTOs.Bodies.Posts.Root;
 using Application.Common.Pagination;
 using Application.Responses;
+using Domain.Posts;
 using Domain.Users;
 using IntegrationTests.Common;
 using IntegrationTests.Fixtures;
@@ -14,134 +15,154 @@ namespace IntegrationTests.Controllers;
 
 public class PostControllerTests(CustomWebApplicationFactoryFixture factory) : BaseControllerTest(factory), IAsyncLifetime
 {
+    private const string BaseUrl = "/api/posts";
     private AppUser _user = null!;
+    
+    private static string PostCacheKey(Guid postId) => $"post-{postId.ToString()}";
+    private static string PostsPageCacheKey(int page, int size) => $"posts-{page}-{size}";
+
+    private async Task<Post> AddPostToDbAsync(Post post)
+    {
+        DbContext.Posts.Add(post);
+        await DbContext.SaveChangesAsync();
+        return post;
+    }
+
+    private static void AssertPostsMatch(Post expected, PostResponseDto? actual)
+    {
+        Assert.NotNull(actual);
+        Assert.Equal(expected.Id, actual.Id);
+        Assert.Equal(expected.Text, actual.Text);
+        Assert.Equal(expected.Likes.Count, actual.LikesCount);
+        Assert.Equal(expected.Comments.Count, actual.CommentsCount);
+        Assert.Equal(expected.User.Id, actual.UserId);
+        Assert.Equal(expected.User.UserName, actual.UserName);
+    }
+
+    private static void AssertPaginationHeadersAreValid<T>(HttpResponseMessage response, PagedResult<T>? result)
+    {
+        Assert.True(response.Headers.Contains("X-Current-Page"));
+        Assert.True(response.Headers.Contains("X-Page-Size"));
+        Assert.True(response.Headers.Contains("X-Total-Items"));
+        Assert.True(response.Headers.Contains("X-Total-Pages"));
+        
+        var currentPage = response.Headers.GetValues("X-Current-Page").First();
+        var pageSize = response.Headers.GetValues("X-Page-Size").First();
+        var totalItems = response.Headers.GetValues("X-Total-Items").First();
+        var totalPages = response.Headers.GetValues("X-Total-Pages").First();
+        
+        Assert.NotNull(result);
+        Assert.Equal(result.PageNumber, int.Parse(currentPage));
+        Assert.Equal(result.PageSize, int.Parse(pageSize));
+        Assert.Equal(result.TotalCount, int.Parse(totalItems));
+        Assert.Equal(result.TotalPages, int.Parse(totalPages));
+    }
     
     [Fact]
     public async Task Create_ShouldReturnCreatedResponse_WithLocationHeader_AndPostDto()
     {
         var dto = new CreatePostDto("Test text", _user.Id.ToString());
         
-        var response = await Client.PostAsJsonAsync("/api/post", dto);
+        var response = await Client.PostAsJsonAsync($"{BaseUrl}", dto);
         var result = await response.Content.ReadFromJsonAsync<PostResponseDto>();
+        
+        var postInDb = await DbContext.Posts
+            .Include(x => x.User)
+            .Include(x => x.Comments)
+            .Include(x => x.Likes)
+            .FirstAsync();
+        
+        var locationHeaderContent = response.Headers.Location?.ToString();
+        Assert.Equal(postInDb.Id.ToString(), locationHeaderContent?.Split('/').Last());
         
         Assert.Equal(HttpStatusCode.Created, response.StatusCode);
         Assert.True(response.Headers.Contains("Location"));
         
-        var firstFoundPostInDb = await DbContext.Posts
-            .Include(post => post.User)
-            .Include(post => post.Comments)
-            .Include(post => post.Likes)
-            .FirstAsync();
+        AssertPostsMatch(postInDb, result);
         
-        var locationHeaderContent = response.Headers.Location?.ToString();
-        
-        Assert.Equal(firstFoundPostInDb.Id.ToString(), locationHeaderContent?.Split('/').Last());
-        Assert.NotNull(result);
-        
-        Assert.Equal(firstFoundPostInDb.Id, result.Id);
-        Assert.Equal(firstFoundPostInDb.Text, result.Text);
-        Assert.Equal(firstFoundPostInDb.User.Id, result.UserId);
-        Assert.Equal(firstFoundPostInDb.User.UserName, result.UserName);
-        Assert.Equal(firstFoundPostInDb.Comments.Count, result.CommentsCount);
-        Assert.Equal(firstFoundPostInDb.Likes.Count, result.LikesCount);
+        await Cache.RemoveAsync(PostCacheKey(postInDb.Id));
     }
     
     [Fact]
     public async Task Create_ShouldReturnBadRequestResponse_WhenUserNotFound()
     {
         var dto = new CreatePostDto("Test text", Guid.NewGuid().ToString());
-        var response = await Client.PostAsJsonAsync("/api/post", dto);
+        var response = await Client.PostAsJsonAsync(BaseUrl, dto);
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
     }
 
     [Fact]
     public async Task Delete_ShouldReturnOkResponse()
     {
-        var post = PostDataFixture.GetPost(_user);
-        DbContext.Posts.Add(post);
-        await DbContext.SaveChangesAsync();
-        
-        var response = await Client.DeleteAsync($"/api/post/{post.Id}");
+        var post = await AddPostToDbAsync(PostDataFixture.GetPost(_user));
+        var response = await Client.DeleteAsync($"{BaseUrl}/{post.Id}");
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
     }
     
     [Fact]
-    public async Task Delete_ShouldReturnBadRequestResponse_WhenPostNotFound()
+    public async Task Delete_WhenPostNotFound_ShouldReturnBadRequestResponse()
     {
-        var response = await Client.DeleteAsync($"/api/post/{Guid.NewGuid().ToString()}");
+        var response = await Client.DeleteAsync($"{BaseUrl}/{Guid.NewGuid().ToString()}");
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
     }
     
     [Fact]
-    public async Task GetById_ShouldReturnPostResponseDto()
+    public async Task GetById_ShouldSaveToCache_ThenReturnPostResponseDto()
     {
-        var post = PostDataFixture.GetPost(_user);
-        DbContext.Posts.Add(post);
-        await DbContext.SaveChangesAsync();
+        var post = await AddPostToDbAsync(PostDataFixture.GetPost(_user));
         
-        var response = await Client.GetAsync($"/api/post/{post.Id}");
+        var response = await Client.GetAsync($"{BaseUrl}/{post.Id}");
         var result = await response.Content.ReadFromJsonAsync<PostResponseDto>();
         
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        Assert.NotNull(result);
+        var cachedPost = await Cache.GetAsync<PostResponseDto>(PostCacheKey(post.Id));
+        Assert.NotNull(cachedPost);
         
-        Assert.Equal(post.Id, result.Id);
-        Assert.Equal(post.Text, result.Text);
-        Assert.Equal(post.User.Id, result.UserId);
-        Assert.Equal(post.User.UserName, result.UserName);
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        
+        AssertPostsMatch(post, result);
+        
+        await Cache.RemoveAsync(PostCacheKey(post.Id));
     }
     
     [Fact]
-    public async Task GetById_ShouldReturnNotFoundResponse()
+    public async Task GetById_WhenPostNotFound_ShouldReturnNotFoundResponse()
     {
-        var response = await Client.GetAsync($"/api/post/{Guid.NewGuid().ToString()}");
+        var response = await Client.GetAsync($"{BaseUrl}/{Guid.NewGuid().ToString()}");
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
     
     [Fact]
-    public async Task GetAllPaged_ShouldReturnListWith1Post()
+    public async Task GetAllPaged_ShouldCacheResult_ThenReturnListWith1Post()
     {
-        var post = PostDataFixture.GetPost(_user);
-        DbContext.Posts.Add(post);
-        await DbContext.SaveChangesAsync();
+        await AddPostToDbAsync(PostDataFixture.GetPost(_user));
         
-        var response = await Client.GetAsync("/api/post?pageNumber=1&pageSize=10");
+        var response = await Client.GetAsync($"{BaseUrl}?pageNumber=1&pageSize=10");
         var result = await response.Content.ReadFromJsonAsync<PagedResult<PostResponseDto>>();
+        
+        var cachedResult = await Cache.GetAsync<PagedResult<PostResponseDto>>(PostsPageCacheKey(1,10));
+        Assert.NotNull(cachedResult);
         
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         
-        Assert.True(response.Headers.Contains("X-Current-Page"));
-        Assert.True(response.Headers.Contains("X-Page-Size"));
-        Assert.True(response.Headers.Contains("X-Total-Items"));
-        Assert.True(response.Headers.Contains("X-Total-Pages"));
+        AssertPaginationHeadersAreValid(response, result);
         
-        Assert.NotNull(result);
-        Assert.NotEmpty(result.Items);
-        Assert.Equal(1, result.TotalCount);
-        Assert.Equal(1, result.TotalPages);
-        Assert.Equal(10, result.PageSize);
-        Assert.Equal(1, result.PageNumber);
+        await Cache.RemoveAsync(PostsPageCacheKey(1, 10));
     }
 
     [Fact]
-    public async Task GetAllPaged_ShouldReturnEmptyList()
+    public async Task GetAllPaged_ShouldCacheResult_ThenReturnEmptyList()
     {
-        var response = await Client.GetAsync("/api/post?pageNumber=1&pageSize=10");
+        var response = await Client.GetAsync($"{BaseUrl}?pageNumber=1&pageSize=10");
         var result = await response.Content.ReadFromJsonAsync<PagedResult<PostResponseDto>>();
+        
+        var cachedResult = await Cache.GetAsync<PagedResult<PostResponseDto>>(PostsPageCacheKey(1, 10));
+        Assert.NotNull(cachedResult);
         
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         
-        Assert.True(response.Headers.Contains("X-Current-Page"));
-        Assert.True(response.Headers.Contains("X-Page-Size"));
-        Assert.True(response.Headers.Contains("X-Total-Items"));
-        Assert.True(response.Headers.Contains("X-Total-Pages"));
+        AssertPaginationHeadersAreValid(response, result);
         
-        Assert.NotNull(result);
-        Assert.Empty(result.Items);
-        Assert.Equal(0, result.TotalCount);
-        Assert.Equal(0, result.TotalPages);
-        Assert.Equal(10, result.PageSize);
-        Assert.Equal(1, result.PageNumber);
+        await Cache.RemoveAsync(PostsPageCacheKey(1, 10));
     }
 
     public async Task InitializeAsync()

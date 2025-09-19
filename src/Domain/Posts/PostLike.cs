@@ -15,6 +15,8 @@ public class PostLike : EntityBase
     internal PostLike(AppUser user, Post post) 
     {
         User = user;
+        UserId = user.Id;
         Post = post;
+        PostId = post.Id;
     }
 }

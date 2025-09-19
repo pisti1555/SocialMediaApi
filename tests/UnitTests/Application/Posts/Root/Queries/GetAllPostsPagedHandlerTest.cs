@@ -1,0 +1,112 @@
+﻿using Application.Common.Pagination;
+using Application.Requests.Posts.Root.Queries.GetAllPaged;
+using Application.Responses;
+using Moq;
+using UnitTests.Application.Posts.Common;
+using UnitTests.Extensions;
+using UnitTests.Factories;
+
+namespace UnitTests.Application.Posts.Root.Queries;
+
+public class GetAllPostsPagedHandlerTest : BasePostHandlerTest
+{
+    private readonly GetAllPostsPagedHandler _handler;
+    
+    private readonly PagedResult<PostResponseDto> _posts;
+    private readonly string _postsCacheKey;
+
+    public GetAllPostsPagedHandlerTest()
+    {
+        _handler = new GetAllPostsPagedHandler(PostRepositoryMock.Object, CacheServiceMock.Object);
+        
+        var postsList = TestDataFactory.CreatePosts(5);
+        var postResponseDtoList = Mapper.Map<List<PostResponseDto>>(postsList);
+        _posts = PagedResult<PostResponseDto>.Create(postResponseDtoList, postResponseDtoList.Count, 1, 10);
+        _postsCacheKey = $"posts-{Query.PageNumber}-{Query.PageSize}";
+    }
+
+    private static readonly GetAllPostsPagedQuery Query = new()
+    {
+        PageNumber = 1,
+        PageSize = 10
+    };
+    
+    private static void AssertPostsMatch(PagedResult<PostResponseDto> expected, PagedResult<PostResponseDto> actual)
+    {
+        Assert.NotNull(actual);
+        Assert.NotNull(actual.Items);
+        Assert.Equal(expected.TotalCount, actual.TotalCount);
+        Assert.Equal(expected.Items.Count, actual.Items.Count);
+        
+        for (var i = 0; i < expected.Items.Count; i++)
+        {
+            Assert.Equal(expected.Items[i].Id, actual.Items[i].Id);
+            Assert.Equal(expected.Items[i].Text, actual.Items[i].Text);
+            Assert.Equal(expected.Items[i].CreatedAt, actual.Items[i].CreatedAt);
+            Assert.Equal(expected.Items[i].UserId, actual.Items[i].UserId);
+            Assert.Equal(expected.Items[i].UserName, actual.Items[i].UserName);
+            Assert.Equal(expected.Items[i].LikesCount, actual.Items[i].LikesCount);
+            Assert.Equal(expected.Items[i].CommentsCount, actual.Items[i].CommentsCount);
+            Assert.Equal(expected.Items[i].Likes.Select(x => x.Id), actual.Items[i].Likes.Select(x => x.Id));
+            Assert.Equal(expected.Items[i].Comments.Select(x => x.Id), actual.Items[i].Comments.Select(x => x.Id));
+        }
+    }
+
+    [Fact]
+    public async Task Handle_WhenNoCache_ShouldReturnPagedResultFromDatabase()
+    {
+        // Arrange
+        CacheServiceMock.SetupCache<PagedResult<PostResponseDto>?>(_postsCacheKey, null);
+        PostRepositoryMock
+            .Setup(x => x.GetDtoPagedAsync(Query.PageNumber, Query.PageSize))
+            .ReturnsAsync(_posts);
+
+        // Act
+        var result = await _handler.Handle(Query, CancellationToken.None);
+
+        // Assert
+        CacheServiceMock.VerifyCacheHit<PagedResult<PostResponseDto>?>(_postsCacheKey);
+        PostRepositoryMock.Verify(x => x.GetDtoPagedAsync(Query.PageNumber, Query.PageSize), Times.Once);
+        
+        AssertPostsMatch(_posts, result);
+    }
+    
+    [Fact]
+    public async Task Handle_WhenCacheExists_ShouldReturnPagedResultFromCache()
+    {
+        // Arrange
+        CacheServiceMock.SetupCache<PagedResult<PostResponseDto>?>(_postsCacheKey, _posts);
+        PostRepositoryMock
+            .Setup(x => x.GetDtoPagedAsync(Query.PageNumber, Query.PageSize))
+            .ReturnsAsync(_posts);
+
+        // Act
+        var result = await _handler.Handle(Query, CancellationToken.None);
+
+        // Assert
+        CacheServiceMock.VerifyCacheHit<PagedResult<PostResponseDto>>(_postsCacheKey);
+        PostRepositoryMock.Verify(x => x.GetDtoPagedAsync(Query.PageNumber, Query.PageSize), Times.Never);
+        
+        AssertPostsMatch(_posts, result);
+    }
+
+    [Fact]
+    public async Task Handle_WhenNoItemsFound_ShouldReturnEmptyPagedResult()
+    {
+        // Arrange
+        var emptyPosts = PagedResult<PostResponseDto>.Create(new List<PostResponseDto>(), 0, 1, 10);
+        
+        CacheServiceMock.SetupCache<PagedResult<PostResponseDto>?>(_postsCacheKey, null);
+        PostRepositoryMock
+            .Setup(x => x.GetDtoPagedAsync(Query.PageNumber, Query.PageSize))
+            .ReturnsAsync(emptyPosts);
+        
+        var result = await _handler.Handle(Query, CancellationToken.None);
+        
+        // Assert
+        CacheServiceMock.VerifyCacheHit<PagedResult<PostResponseDto>?>(_postsCacheKey);
+        PostRepositoryMock.Verify(x => x.GetDtoPagedAsync(Query.PageNumber, Query.PageSize), Times.Once);
+        
+        AssertPostsMatch(emptyPosts, result);
+    }
+}

@@ -1,6 +1,7 @@
 ﻿using Application.Common.Helpers;
-using Application.Common.Interfaces.Repositories.AppUser;
-using Application.Common.Interfaces.Repositories.Post;
+using Application.Contracts.Persistence.Repositories.AppUser;
+using Application.Contracts.Persistence.Repositories.Post;
+using Application.Contracts.Services;
 using Application.Responses;
 using AutoMapper;
 using Cortex.Mediator.Commands;
@@ -12,6 +13,7 @@ namespace Application.Requests.Posts.PostLike.Commands.LikePost;
 public class LikePostHandler(
     IPostRepository postRepository,
     IAppUserRepository userRepository,
+    ICacheService cache,
     IMapper mapper
 ) : ICommandHandler<LikePostCommand, PostLikeResponseDto>
 {
@@ -38,6 +40,8 @@ public class LikePostHandler(
         
         if (!await postRepository.SaveChangesAsync())
             throw new BadRequestException("Like could not be created.");
+        
+        await cache.RemoveAsync($"post-likes-{postGuid.ToString()}", cancellationToken);
         
         return mapper.Map<PostLikeResponseDto>(like);
     }

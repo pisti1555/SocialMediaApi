@@ -13,78 +13,108 @@ namespace IntegrationTests.Controllers;
 
 public class PostLikeControllerTests(CustomWebApplicationFactoryFixture factory) : BaseControllerTest(factory), IAsyncLifetime
 {
+    private const string PostsBaseUrl = "/api/posts";
     private AppUser _user = null!;
     private Post _post = null!;
     
-    [Fact]
-    public async Task GetLikesOfPost_ShouldReturnOkList()
+    private static string PostLikesCacheKey(Guid postId) => $"post-likes-{postId.ToString()}";
+    
+    private async Task<PostLike> AddLikeToDbAsync(PostLike like)
     {
-        var like = PostLikeDataFixture.GetPostLike(_user, _post);
         DbContext.PostLikes.Add(like);
         await DbContext.SaveChangesAsync();
-        
-        var response = await Client.GetAsync($"/api/post/{_post.Id}/likes");
-        var result = await response.Content.ReadFromJsonAsync<List<PostLikeResponseDto>>();
-        
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        Assert.NotNull(result);
-        Assert.Single(result);
-        Assert.Equal(like.Id, result[0].Id);
-        Assert.Equal(like.UserId, result[0].UserId);
-        Assert.Equal(like.PostId, result[0].PostId);
+        return like;
+    }
+    
+    private static void AssertLikesMatch(List<PostLike> expected, List<PostLikeResponseDto>? actual)
+    {
+        Assert.NotNull(actual);
+        Assert.Equal(expected.Count, actual.Count);
+
+        for (var i = 0; i < expected.Count; i++)
+        {
+            Assert.Equal(expected[i].Id, actual[i].Id);
+            Assert.Equal(expected[i].User.Id, actual[i].UserId);
+            Assert.Equal(expected[i].Post.Id, actual[i].PostId);
+            Assert.Equal(expected[i].User.UserName, actual[i].UserName);
+        }
     }
     
     [Fact]
-    public async Task GetLikesOfPost_ShouldReturnEmptyList()
+    public async Task GetLikesOfPost_ShouldCacheResult_ThenReturnFullList()
     {
-        var response = await Client.GetAsync($"/api/post/{_post.Id}/likes");
-        var result = await response.Content.ReadFromJsonAsync<List<PostCommentResponseDto>>();
+        var like = await AddLikeToDbAsync(PostLikeDataFixture.GetPostLike(_user, _post));
+        
+        var response = await Client.GetAsync($"{PostsBaseUrl}/{_post.Id}/likes");
+        var result = await response.Content.ReadFromJsonAsync<List<PostLikeResponseDto>>();
+        
+        var cache = await Cache.GetAsync<List<PostLikeResponseDto>?>(PostLikesCacheKey(_post.Id));
+        Assert.NotNull(cache);
         
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        
+        AssertLikesMatch(like.Post.Likes.ToList(), result);
+        
+        await Cache.RemoveAsync(PostLikesCacheKey(_post.Id));
+    }
+    
+    [Fact]
+    public async Task GetLikesOfPost_WhenNoLikes_ShouldCacheResult_ThenReturnEmptyList()
+    {
+        var response = await Client.GetAsync($"{PostsBaseUrl}/{_post.Id}/likes");
+        var result = await response.Content.ReadFromJsonAsync<List<PostCommentResponseDto>>();
+        
+        var cache = await Cache.GetAsync<List<PostLikeResponseDto>?>(PostLikesCacheKey(_post.Id));
+        Assert.NotNull(cache);
+        
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        
         Assert.NotNull(result);
         Assert.Empty(result);
+        
+        await Cache.RemoveAsync(PostLikesCacheKey(_post.Id));
     }
 
     [Fact]
-    public async Task Like_ShouldReturnOkResponse_WithPostLikeDto()
+    public async Task AddLike_ShouldAddLike_ThenReturnPostLikeDto()
     {
-        var response = await Client.PostAsync($"/api/post/{_post.Id}/likes?userId={_user.Id.ToString()}", null);
+        var response = await Client.PostAsync($"{PostsBaseUrl}/{_post.Id}/likes?userId={_user.Id.ToString()}", null);
         var result = await response.Content.ReadFromJsonAsync<PostLikeResponseDto>();
 
-        var firstFoundLikeOfPost = await DbContext.PostLikes
+        var likeInDb = await DbContext.PostLikes
             .Where(x => x.PostId == _post.Id)
+            .Include(x => x.User)
+            .Include(x => x.Post)
             .FirstAsync();
     
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        
         Assert.NotNull(result);
-        Assert.Equal(firstFoundLikeOfPost.Id, result.Id);
-        Assert.Equal(firstFoundLikeOfPost.UserId, result.UserId);
-        Assert.Equal(firstFoundLikeOfPost.PostId, result.PostId);
+        Assert.Equal(likeInDb.Id, result.Id);
+        Assert.Equal(likeInDb.User.Id, result.UserId);
+        Assert.Equal(likeInDb.Post.Id, result.PostId);
+        Assert.Equal(likeInDb.User.UserName, result.UserName);
     }
     
     [Fact]
-    public async Task Like_ShouldReturnBadRequest_WhenPostNotFound()
+    public async Task AddLike_WhenPostNotFound_ShouldReturnBadRequest()
     {
-        var response = await Client.PostAsJsonAsync($"/api/post/{Guid.NewGuid().ToString()}/likes", _user.Id.ToString());
+        var response = await Client.PostAsJsonAsync($"{PostsBaseUrl}/{Guid.NewGuid().ToString()}/likes", _user.Id.ToString());
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
     }
     
     [Fact]
-    public async Task Dislike_ShouldReturnOk()
+    public async Task RemoveLike_ShouldReturnOk()
     {
-        var like = PostLikeDataFixture.GetPostLike(_user, _post);
-        DbContext.PostLikes.Add(like);
-        await DbContext.SaveChangesAsync();
-        
-        var response = await Client.DeleteAsync($"/api/post/{_post.Id.ToString()}/likes?userId={_user.Id.ToString()}");
- 
+        await AddLikeToDbAsync(PostLikeDataFixture.GetPostLike(_user, _post));
+        var response = await Client.DeleteAsync($"{PostsBaseUrl}/{_post.Id.ToString()}/likes?userId={_user.Id.ToString()}");
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
     }
 
     [Fact]
-    public async Task Dislike_ShouldReturnBadRequest_WhenPostNotFound()
+    public async Task RemoveLike_WhenPostNotFound_ShouldReturnBadRequest()
     {
-        var response = await Client.DeleteAsync($"/api/post/{Guid.NewGuid().ToString()}/likes?userId={_user.Id.ToString()}");
+        var response = await Client.DeleteAsync($"{PostsBaseUrl}/{Guid.NewGuid().ToString()}/likes?userId={_user.Id.ToString()}");
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
     }
     

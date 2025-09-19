@@ -1,5 +1,6 @@
 ﻿using Application.Common.Helpers;
-using Application.Common.Interfaces.Repositories.Post;
+using Application.Contracts.Persistence.Repositories.Post;
+using Application.Contracts.Services;
 using Cortex.Mediator;
 using Cortex.Mediator.Commands;
 using Domain.Common.Exceptions.CustomExceptions;
@@ -7,7 +8,8 @@ using Domain.Common.Exceptions.CustomExceptions;
 namespace Application.Requests.Posts.PostLike.Commands.DislikePost;
 
 public class DislikePostHandler(
-    IPostRepository postRepository
+    IPostRepository postRepository,
+    ICacheService cache
 ) : ICommandHandler<DislikePostCommand, Unit>
 { 
     public async Task<Unit> Handle(DislikePostCommand request, CancellationToken cancellationToken)
@@ -31,6 +33,8 @@ public class DislikePostHandler(
 
         if (!await postRepository.SaveChangesAsync())
             throw new BadRequestException("Like could not be deleted.");
+        
+        await cache.RemoveAsync($"post-likes-{postGuid.ToString()}", cancellationToken);
         
         return Unit.Value;
     }

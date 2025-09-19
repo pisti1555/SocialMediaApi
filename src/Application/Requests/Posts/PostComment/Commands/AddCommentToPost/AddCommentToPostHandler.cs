@@ -1,6 +1,7 @@
 ﻿using Application.Common.Helpers;
-using Application.Common.Interfaces.Repositories.AppUser;
-using Application.Common.Interfaces.Repositories.Post;
+using Application.Contracts.Persistence.Repositories.AppUser;
+using Application.Contracts.Persistence.Repositories.Post;
+using Application.Contracts.Services;
 using Application.Responses;
 using AutoMapper;
 using Cortex.Mediator.Commands;
@@ -12,6 +13,7 @@ namespace Application.Requests.Posts.PostComment.Commands.AddCommentToPost;
 public class AddCommentToPostHandler(
     IPostRepository postRepository,
     IAppUserRepository userRepository,
+    ICacheService cache,
     IMapper mapper
 ) : ICommandHandler<AddCommentToPostCommand, PostCommentResponseDto>
 {
@@ -35,6 +37,8 @@ public class AddCommentToPostHandler(
 
         if (!await postRepository.SaveChangesAsync())
             throw new BadRequestException("Comment could not be created.");
+        
+        await cache.RemoveAsync($"post-comments-{postGuid.ToString()}", cancellationToken);
         
         return mapper.Map<PostCommentResponseDto>(comment);
     }

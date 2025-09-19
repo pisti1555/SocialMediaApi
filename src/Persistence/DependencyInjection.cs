@@ -1,10 +1,11 @@
 ﻿using System.Data;
-using Application.Common.Interfaces.Persistence;
-using Application.Common.Interfaces.Repositories.AppUser;
-using Application.Common.Interfaces.Repositories.Post;
+using Application.Contracts.Persistence.Cortex.Mediator;
+using Application.Contracts.Persistence.Repositories.AppUser;
+using Application.Contracts.Persistence.Repositories.Post;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Persistence.Cortex.Mediator;
 using Persistence.DataContext;
 using Persistence.Repositories;
 using Persistence.Repositories.Post;
@@ -17,7 +18,7 @@ public static class DependencyInjection
     {
         services.AddDbContext<AppDbContext>(opt =>
         {
-            opt.UseNpgsql(config.GetConnectionString("DefaultConnection"));
+            opt.UseNpgsql(config.GetConnectionString("Database"));
         });
         
         services.AddScoped<IDbConnection>(sp => 
