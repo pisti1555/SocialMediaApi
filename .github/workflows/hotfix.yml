@@ -89,7 +89,7 @@ jobs:
       - name: Build & Push Docker image
         run: |
           IMAGE_NAME=ghcr.io/${{ github.actor }}/socialmedia-api
-          VERSION=${{ needs.build.outputs.version }}
+          VERSION=${{ needs.build-test-version.outputs.version }}
 
           docker build -t $IMAGE_NAME:$VERSION .
           docker push $IMAGE_NAME:$VERSION
