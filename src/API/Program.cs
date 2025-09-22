@@ -2,6 +2,7 @@ using API;
 using API.Middlewares;
 using Application;
 using Infrastructure;
+using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.EntityFrameworkCore;
 using Persistence;
 using Persistence.DataContext;
@@ -25,6 +26,10 @@ builder.Services.AddApi();
 
 
 var app = builder.Build();
+
+app.UseForwardedHeaders(new ForwardedHeadersOptions 
+    { ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto });
+
 app.UseStaticFiles();
 app.UseSerilogRequestLogging();
 app.UseMiddleware<ErrorHandlerMiddleware>();
