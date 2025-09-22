@@ -105,6 +105,37 @@ public class PostCommentControllerTests(CustomWebApplicationFactoryFixture facto
     }
     
     [Fact]
+    public async Task UpdateComment_ShouldUpdateComment_ThenReturnPostCommentDto()
+    {
+        var comment = await AddCommentToDbAsync(PostCommentDataFixture.GetPostComment(_user, _post));
+        var dto = new UpdateCommentOfPostDto(_user.Id.ToString(), "Updated text");
+        
+        var response = await Client.PatchAsJsonAsync($"{PostsBaseUrl}/{_post.Id}/comments/{comment.Id}", dto);
+        var result = await response.Content.ReadFromJsonAsync<PostCommentResponseDto>();
+        
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.NotNull(result);
+    }
+    
+    [Fact]
+    public async Task UpdateComment_WhenPostNotFound_ShouldReturnBadRequest()
+    {
+        var guid = Guid.NewGuid().ToString();
+        var commentId = PostCommentDataFixture.GetPostComment(_user, _post).Id.ToString();
+        
+        var response = await Client.PatchAsJsonAsync($"{PostsBaseUrl}/{guid}/comments/{commentId}", _user.Id.ToString());
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+    
+    [Fact]
+    public async Task UpdateComment_WhenCommentNotFound_ShouldReturnBadRequest()
+    {
+        var guid = Guid.NewGuid().ToString();
+        var response = await Client.PatchAsJsonAsync($"{PostsBaseUrl}/{_post.Id.ToString()}/comments/{guid}", _user.Id.ToString());
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+    
+    [Fact]
     public async Task RemoveComment_ShouldReturnOk()
     {
         await AddCommentToDbAsync(PostCommentDataFixture.GetPostComment(_user, _post));

@@ -2,6 +2,7 @@
 using API.DTOs.Bodies.Posts.Comments;
 using Application.Requests.Posts.PostComment.Commands.AddCommentToPost;
 using Application.Requests.Posts.PostComment.Commands.RemoveCommentFromPost;
+using Application.Requests.Posts.PostComment.Commands.UpdateCommentOfPost;
 using Application.Requests.Posts.PostComment.Queries.GetCommentsOfPost;
 using Application.Responses;
 using Asp.Versioning;
@@ -29,6 +30,15 @@ public class PostCommentController(IMediator mediator) : BaseApiController
     {
         var command = new AddCommentToPostCommand(postId, dto.UserId, dto.Text);
         var result = await mediator.SendCommandAsync<AddCommentToPostCommand, PostCommentResponseDto>(command);
+        return Ok(result);
+    }
+    
+    [MapToApiVersion(1)]
+    [HttpPatch("{commentId}")]
+    public async Task<ActionResult<PostCommentResponseDto>> UpdateComment([FromRoute]string postId, [FromRoute]string commentId, [FromBody]UpdateCommentOfPostDto dto)
+    {
+        var command = new UpdateCommentOfPostCommand(postId, commentId, dto.UserId, dto.Text);
+        var result = await mediator.SendCommandAsync<UpdateCommentOfPostCommand, PostCommentResponseDto>(command);
         return Ok(result);
     }
     
