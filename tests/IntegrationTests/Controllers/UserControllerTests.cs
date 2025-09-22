@@ -13,7 +13,7 @@ namespace IntegrationTests.Controllers;
 
 public class UserControllerTests(CustomWebApplicationFactoryFixture factory) : BaseControllerTest(factory), IAsyncLifetime
 {
-    private const string BaseUrl = "/api/users";
+    private const string BaseUrl = "/api/v1/users";
     
     [Fact]
     public async Task Create_WhenValidRequest_ShouldCreateAndCacheUser_ThenReturnCreatedResponse_WithLocationHeader_AndUserDto()

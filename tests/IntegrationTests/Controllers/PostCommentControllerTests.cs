@@ -14,7 +14,7 @@ namespace IntegrationTests.Controllers;
 
 public class PostCommentControllerTests(CustomWebApplicationFactoryFixture factory) : BaseControllerTest(factory), IAsyncLifetime
 {
-    private const string PostsBaseUrl = "/api/posts";
+    private const string PostsBaseUrl = "/api/v1/posts";
     private AppUser _user = null!;
     private Post _post = null!;
     

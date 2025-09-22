@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Http.Features;
+﻿using Asp.Versioning;
+using Microsoft.AspNetCore.Http.Features;
 
 namespace API;
 
@@ -17,9 +18,6 @@ public static class DependencyInjection
             );
         });
         
-        services.AddOpenApi();
-        services.AddEndpointsApiExplorer();
-        
         services.AddProblemDetails(options =>
         {
             options.CustomizeProblemDetails = context =>
@@ -33,6 +31,21 @@ public static class DependencyInjection
                 context.ProblemDetails.Extensions.TryAdd("traceId", activity?.Id);
             };
         });
+
+        services.AddApiVersioning(options =>
+        {
+            options.DefaultApiVersion = new ApiVersion(1);
+            options.AssumeDefaultVersionWhenUnspecified = true;
+            options.ReportApiVersions = true;
+            options.ApiVersionReader = new UrlSegmentApiVersionReader();
+        }).AddApiExplorer(options =>
+        {
+            options.GroupNameFormat = "'v'VVV";
+            options.SubstituteApiVersionInUrl = true;
+        });
+        
+        services.AddOpenApi();
+        services.AddEndpointsApiExplorer();
         
         return services;
     }

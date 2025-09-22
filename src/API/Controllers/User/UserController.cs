@@ -6,14 +6,17 @@ using Application.Requests.Users.Root.Commands.CreateUser;
 using Application.Requests.Users.Root.Queries.GetAllPaged;
 using Application.Requests.Users.Root.Queries.GetById;
 using Application.Responses;
+using Asp.Versioning;
 using Cortex.Mediator;
 using Microsoft.AspNetCore.Mvc;
 
 namespace API.Controllers.User;
 
-[Route("api/users")]
+[ApiVersion(1)]
+[Route("api/v{v:ApiVersion}/users")]
 public class UserController(IMediator mediator) : BaseApiController
 {
+    [MapToApiVersion(1)]
     [HttpPost]
     public async Task<ActionResult<UserResponseDto>> Create([FromBody]CreateUserCommand command)
     {
@@ -21,6 +24,7 @@ public class UserController(IMediator mediator) : BaseApiController
         return CreatedAtAction(nameof(GetById), new {id = result.Id}, result);
     }
     
+    [MapToApiVersion(1)]
     [HttpGet("{id}")]
     public async Task<ActionResult<UserResponseDto>> GetById([FromRoute]string id)
     {
@@ -29,6 +33,7 @@ public class UserController(IMediator mediator) : BaseApiController
         return Ok(result);
     }
     
+    [MapToApiVersion(1)]
     [HttpGet]
     public async Task<ActionResult<PagedResult<UserResponseDto>>> GetAllPaged([FromQuery]PaginationParams pagination)
     {

@@ -1,4 +1,5 @@
 ﻿using Domain.Common;
+using Domain.Common.Exceptions.CustomExceptions;
 using Domain.Users;
 
 namespace Domain.Posts;
@@ -30,4 +31,15 @@ public class Post : EntityBase
     
     // Methods
     public void UpdateLastInteraction() => LastInteraction = DateTime.UtcNow;
+
+    public void UpdateText(string text)
+    {
+        if (text == Text) return;
+        
+        if (string.IsNullOrWhiteSpace(text)) throw new BadRequestException("Text cannot be empty.");
+        if (text.Length > 20000) throw new BadRequestException("Text is too long.");
+        
+        Text = text;
+        UpdateLastInteraction();
+    }
 }

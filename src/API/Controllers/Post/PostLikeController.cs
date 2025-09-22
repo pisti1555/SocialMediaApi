@@ -3,14 +3,17 @@ using Application.Requests.Posts.PostLike.Commands.DislikePost;
 using Application.Requests.Posts.PostLike.Commands.LikePost;
 using Application.Requests.Posts.PostLike.Queries.GetLikesOfPost;
 using Application.Responses;
+using Asp.Versioning;
 using Cortex.Mediator;
 using Microsoft.AspNetCore.Mvc;
 
 namespace API.Controllers.Post;
 
-[Route("api/posts/{postId}/likes")]
+[ApiVersion(1)]
+[Route("api/v{v:ApiVersion}/posts/{postId}/likes")]
 public class PostLikeController(IMediator mediator) : BaseApiController
 {
+    [MapToApiVersion(1)]
     [HttpGet]
     public async Task<ActionResult<List<PostLikeResponseDto>>> GetLikesOfPost([FromRoute]string postId)
     {
@@ -19,6 +22,7 @@ public class PostLikeController(IMediator mediator) : BaseApiController
         return Ok(result);
     }
     
+    [MapToApiVersion(1)]
     [HttpPost]
     public async Task<ActionResult<PostLikeResponseDto>> LikePost([FromRoute]string postId, [FromQuery]string userId)
     {
@@ -27,6 +31,7 @@ public class PostLikeController(IMediator mediator) : BaseApiController
         return Ok(result);
     }
     
+    [MapToApiVersion(1)]
     [HttpDelete]
     public async Task<ActionResult> DislikePost([FromRoute]string postId, [FromQuery]string userId)
     {

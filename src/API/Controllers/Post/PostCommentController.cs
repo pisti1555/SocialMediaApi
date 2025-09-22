@@ -4,14 +4,17 @@ using Application.Requests.Posts.PostComment.Commands.AddCommentToPost;
 using Application.Requests.Posts.PostComment.Commands.RemoveCommentFromPost;
 using Application.Requests.Posts.PostComment.Queries.GetCommentsOfPost;
 using Application.Responses;
+using Asp.Versioning;
 using Cortex.Mediator;
 using Microsoft.AspNetCore.Mvc;
 
 namespace API.Controllers.Post;
 
-[Route("api/posts/{postId}/comments")]
+[ApiVersion(1)]
+[Route("api/v{v:ApiVersion}/posts/{postId}/comments")]
 public class PostCommentController(IMediator mediator) : BaseApiController
 {
+    [MapToApiVersion(1)]
     [HttpGet]
     public async Task<ActionResult<List<PostCommentResponseDto>>> GetCommentsOfPost([FromRoute]string postId)
     {
@@ -20,6 +23,7 @@ public class PostCommentController(IMediator mediator) : BaseApiController
         return Ok(result);
     }
     
+    [MapToApiVersion(1)]
     [HttpPost]
     public async Task<ActionResult<PostCommentResponseDto>> AddComment([FromRoute]string postId, [FromBody]AddCommentToPostDto dto)
     {
@@ -28,6 +32,7 @@ public class PostCommentController(IMediator mediator) : BaseApiController
         return Ok(result);
     }
     
+    [MapToApiVersion(1)]
     [HttpDelete("{commentId}")]
     public async Task<ActionResult> DeleteComment([FromRoute]string postId, [FromRoute]string commentId, [FromQuery]string userId)
     {

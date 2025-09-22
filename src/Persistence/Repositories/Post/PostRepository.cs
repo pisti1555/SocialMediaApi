@@ -5,6 +5,7 @@ using AutoMapper;
 using AutoMapper.QueryableExtensions;
 using Microsoft.EntityFrameworkCore;
 using Persistence.DataContext;
+using XPost = Domain.Posts.Post;
 
 namespace Persistence.Repositories.Post;
 
@@ -25,22 +26,22 @@ public class PostRepository(
         return context.ChangeTracker.HasChanges();
     }
 
-    public void Add(Domain.Posts.Post post)
+    public void Add(XPost post)
     {
         context.Posts.Add(post);
     }
 
-    public void Update(Domain.Posts.Post post)
+    public void Update(XPost post)
     {
         context.Posts.Update(post);
     }
 
-    public void Delete(Domain.Posts.Post post)
+    public void Delete(XPost post)
     {
         context.Posts.Remove(post);
     }
 
-    public async Task<Domain.Posts.Post?> GetByIdAsync(Guid id)
+    public async Task<XPost?> GetByIdAsync(Guid id)
     {
         return await context.Posts
             .Include(x => x.User)

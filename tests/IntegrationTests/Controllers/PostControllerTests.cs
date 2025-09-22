@@ -15,7 +15,7 @@ namespace IntegrationTests.Controllers;
 
 public class PostControllerTests(CustomWebApplicationFactoryFixture factory) : BaseControllerTest(factory), IAsyncLifetime
 {
-    private const string BaseUrl = "/api/posts";
+    private const string BaseUrl = "/api/v1/posts";
     private AppUser _user = null!;
     
     private static string PostCacheKey(Guid postId) => $"post-{postId.ToString()}";
@@ -90,11 +90,46 @@ public class PostControllerTests(CustomWebApplicationFactoryFixture factory) : B
         var response = await Client.PostAsJsonAsync(BaseUrl, dto);
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
     }
+    
+    [Fact]
+    public async Task Update_ShouldReturnOkResponse_WithPostDto()
+    {
+        var post = await AddPostToDbAsync(PostDataFixture.GetPost(_user));
+        
+        var dto = new UpdatePostDto("Updated text", _user.Id.ToString());
+        var response = await Client.PatchAsJsonAsync($"{BaseUrl}/{post.Id.ToString()}", dto);
+        var result = await response.Content.ReadFromJsonAsync<PostResponseDto>();
+        
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Equal("Updated text", result?.Text);
+        
+        await Cache.RemoveAsync(PostCacheKey(post.Id));
+    }
+    
+    [Fact]
+    public async Task Update_WhenPostNotFound_ShouldReturnNotFoundResponse()
+    {
+        var dto = new UpdatePostDto("Updated text", _user.Id.ToString());
+        var response = await Client.PatchAsJsonAsync($"{BaseUrl}/{Guid.NewGuid().ToString()}", dto);
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+    }
+    
+    [Fact]
+    public async Task Update_WhenUserDoesNotOwnPost_ShouldReturnBadRequestResponse()
+    {
+        var otherUser = AppUserDataFixture.GetUser();
+        var post = await AddPostToDbAsync(PostDataFixture.GetPost(otherUser));
+        
+        var dto = new UpdatePostDto("Updated text", _user.Id.ToString());
+        var response = await Client.PatchAsJsonAsync($"{BaseUrl}/{post.Id.ToString()}", dto);
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
 
     [Fact]
     public async Task Delete_ShouldReturnOkResponse()
     {
         var post = await AddPostToDbAsync(PostDataFixture.GetPost(_user));
+        
         var response = await Client.DeleteAsync($"{BaseUrl}/{post.Id}");
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
     }

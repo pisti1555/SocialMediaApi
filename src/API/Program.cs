@@ -5,6 +5,7 @@ using Infrastructure;
 using Microsoft.EntityFrameworkCore;
 using Persistence;
 using Persistence.DataContext;
+using Scalar.AspNetCore;
 using Serilog;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -30,10 +31,8 @@ app.UseMiddleware<ErrorHandlerMiddleware>();
 app.UseCors();
 app.MapControllers();
 
-if (app.Environment.IsDevelopment())
-{
-    app.MapOpenApi();
-}
+app.MapOpenApi();
+app.MapScalarApiReference();
 
 // Migrate database
 using (var scope = app.Services.CreateScope())

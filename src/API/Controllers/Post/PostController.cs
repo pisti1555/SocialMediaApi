@@ -5,17 +5,21 @@ using API.Extensions;
 using Application.Common.Pagination;
 using Application.Requests.Posts.Root.Commands.CreatePost;
 using Application.Requests.Posts.Root.Commands.DeletePost;
+using Application.Requests.Posts.Root.Commands.UpdatePost;
 using Application.Requests.Posts.Root.Queries.GetAllPaged;
 using Application.Requests.Posts.Root.Queries.GetById;
 using Application.Responses;
+using Asp.Versioning;
 using Cortex.Mediator;
 using Microsoft.AspNetCore.Mvc;
 
 namespace API.Controllers.Post;
 
-[Route("api/posts")]
+[ApiVersion(1)]
+[Route("api/v{v:ApiVersion}/posts")]
 public class PostController(IMediator mediator) : BaseApiController
 {
+    [MapToApiVersion(1)]
     [HttpPost]
     public async Task<ActionResult<PostResponseDto>> Create([FromBody]CreatePostDto dto)
     {
@@ -23,7 +27,17 @@ public class PostController(IMediator mediator) : BaseApiController
         var result = await mediator.SendCommandAsync<CreatePostCommand, PostResponseDto>(command);
         return CreatedAtAction(nameof(GetById), new {id = result.Id}, result);
     }
+
+    [MapToApiVersion(1)]
+    [HttpPatch("{id}")]
+    public async Task<ActionResult<PostResponseDto>> Update([FromRoute]string id, [FromBody]UpdatePostDto dto)
+    {
+        var command = new UpdatePostCommand(id, dto.UserId, dto.Text);
+        var result = await mediator.SendCommandAsync<UpdatePostCommand, PostResponseDto>(command);
+        return Ok(result);
+    }
     
+    [MapToApiVersion(1)]
     [HttpDelete("{id}")]
     public async Task<ActionResult> Delete([FromRoute]string id)
     {
@@ -32,6 +46,7 @@ public class PostController(IMediator mediator) : BaseApiController
         return Ok();
     }
     
+    [MapToApiVersion(1)]
     [HttpGet("{id}")]
     public async Task<ActionResult<PostResponseDto>> GetById([FromRoute]string id)
     {
@@ -40,6 +55,7 @@ public class PostController(IMediator mediator) : BaseApiController
         return Ok(result);
     }
     
+    [MapToApiVersion(1)]
     [HttpGet]
     public async Task<ActionResult<PagedResult<PostResponseDto>>> GetAllPaged([FromQuery]PaginationParams pagination)
     {

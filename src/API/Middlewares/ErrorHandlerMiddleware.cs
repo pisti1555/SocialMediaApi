@@ -52,7 +52,7 @@ public class ErrorHandlerMiddleware(
                 Type = env.IsDevelopment() ? e.GetType().Name : null,
                 Status = StatusCodes.Status400BadRequest,
                 Title = "Validation failed",
-                Detail = e.Message,
+                Detail = "Some fields are invalid.",
                 Instance = $"{context.Request.Method} {context.Request.Path}",
                 Errors = errors
             };
