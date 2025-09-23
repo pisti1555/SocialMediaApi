@@ -1,4 +1,5 @@
-﻿using Application.Requests.Posts.PostComment.Queries.GetCommentsOfPost;
+﻿using System.Linq.Expressions;
+using Application.Requests.Posts.PostComment.Queries.GetCommentsOfPost;
 using Application.Responses;
 using Domain.Common.Exceptions.CustomExceptions;
 using Domain.Posts;
@@ -15,24 +16,22 @@ public class GetCommentsOfPostHandlerTest : BasePostHandlerTest
     private readonly GetCommentsOfPostHandler _handler;
     
     private readonly Post _post;
-    private readonly List<XPostComment> _comments;
+    private readonly List<PostCommentResponseDto> _comments;
     private readonly string _postCommentsCacheKey;
-    private readonly List<PostCommentResponseDto> _cachedCommentsOfPost;
     private readonly GetCommentsOfPostQuery _query;
 
     public GetCommentsOfPostHandlerTest()
     {
-        _handler = new GetCommentsOfPostHandler(PostRepositoryMock.Object, CacheServiceMock.Object, Mapper);
+        _handler = new GetCommentsOfPostHandler(PostRepositoryMock.Object, CommentRepositoryMock.Object, CacheServiceMock.Object);
         
         _post = TestDataFactory.CreatePostWithRelations(commentCount: 5).Post;
-        _comments = _post.Comments.ToList();
+        _comments = Mapper.Map<List<PostCommentResponseDto>>(_post.Comments);
         
         _postCommentsCacheKey = $"post-comments-{_post.Id.ToString()}";
-        _cachedCommentsOfPost = Mapper.Map<List<PostCommentResponseDto>>(_comments);
         _query = new GetCommentsOfPostQuery(_post.Id.ToString());
     }
     
-    private static void AssertCommentsMatch(List<XPostComment> expected, List<PostCommentResponseDto> actual)
+    private static void AssertCommentsMatch(List<PostCommentResponseDto> expected, List<PostCommentResponseDto> actual)
     {
         Assert.NotNull(actual);
         Assert.Equal(expected.Count, actual.Count);
@@ -42,9 +41,7 @@ public class GetCommentsOfPostHandlerTest : BasePostHandlerTest
             Assert.Equal(expected[i].Id, actual[i].Id);
             Assert.Equal(expected[i].Text, actual[i].Text);
             Assert.Equal(expected[i].UserId, actual[i].UserId);
-            Assert.Equal(expected[i].User.Id, actual[i].UserId);
             Assert.Equal(expected[i].PostId, actual[i].PostId);
-            Assert.Equal(expected[i].Post.Id, actual[i].PostId);
         }
     }
 
@@ -54,15 +51,15 @@ public class GetCommentsOfPostHandlerTest : BasePostHandlerTest
         // Arrange
         CacheServiceMock.SetupCache<List<PostCommentResponseDto>?>(_postCommentsCacheKey, null);
         PostRepositoryMock.SetupPostExists(_post.Id, true);
-        CommentRepositoryMock.SetupComments(_comments, _post.Id);
+        CommentRepositoryMock.SetupComments(_comments);
 
         // Act
         var result = await _handler.Handle(_query, CancellationToken.None);
 
         // Assert
         CacheServiceMock.VerifyCacheHit<List<PostCommentResponseDto>?>(_postCommentsCacheKey);
-        PostRepositoryMock.Verify(x => x.ExistsAsync(_post.Id), Times.Once);
-        CommentRepositoryMock.Verify(x => x.GetAllCommentOfPostAsync(_post.Id), Times.Once);
+        PostRepositoryMock.Verify(x => x.ExistsAsync(_post.Id, It.IsAny<CancellationToken>()), Times.Once);
+        CommentRepositoryMock.Verify(x => x.GetAllAsync(It.IsAny<Expression<Func<XPostComment, bool>>>(), It.IsAny<CancellationToken>()), Times.Once);
         
         AssertCommentsMatch(_comments, result);
     }
@@ -71,7 +68,7 @@ public class GetCommentsOfPostHandlerTest : BasePostHandlerTest
     public async Task Handle_WhenCacheExists_ShouldReturnOkListFromCache()
     {
         // Arrange
-        CacheServiceMock.SetupCache<List<PostCommentResponseDto>?>(_postCommentsCacheKey, _cachedCommentsOfPost);
+        CacheServiceMock.SetupCache<List<PostCommentResponseDto>?>(_postCommentsCacheKey, _comments);
         PostRepositoryMock.SetupPostExists(_post.Id, true);
 
         // Act
@@ -79,8 +76,8 @@ public class GetCommentsOfPostHandlerTest : BasePostHandlerTest
 
         // Assert
         CacheServiceMock.VerifyCacheHit<List<PostCommentResponseDto>?>(_postCommentsCacheKey);
-        PostRepositoryMock.Verify(x => x.ExistsAsync(_post.Id), Times.Once);
-        CommentRepositoryMock.Verify(x => x.GetAllCommentOfPostAsync(_post.Id), Times.Never);
+        PostRepositoryMock.Verify(x => x.ExistsAsync(_post.Id, It.IsAny<CancellationToken>()), Times.Once);
+        CommentRepositoryMock.Verify(x => x.GetAllAsync(It.IsAny<Expression<Func<XPostComment, bool>>>(), It.IsAny<CancellationToken>()), Times.Never);
         
         AssertCommentsMatch(_comments, result);
     }
@@ -91,15 +88,15 @@ public class GetCommentsOfPostHandlerTest : BasePostHandlerTest
         // Arrange
         CacheServiceMock.SetupCache<List<PostCommentResponseDto>?>(_postCommentsCacheKey, null);
         PostRepositoryMock.SetupPostExists(_post.Id, true);
-        CommentRepositoryMock.SetupComments([], _post.Id);
+        CommentRepositoryMock.SetupComments([]);
         
         // Act
         var result = await _handler.Handle(_query, CancellationToken.None);
 
         // Assert
         CacheServiceMock.VerifyCacheHit<List<PostCommentResponseDto>?>(_postCommentsCacheKey);
-        PostRepositoryMock.Verify(x => x.ExistsAsync(_post.Id), Times.Once);
-        CommentRepositoryMock.Verify(x => x.GetAllCommentOfPostAsync(_post.Id), Times.Once);
+        PostRepositoryMock.Verify(x => x.ExistsAsync(_post.Id, It.IsAny<CancellationToken>()), Times.Once);
+        CommentRepositoryMock.Verify(x => x.GetAllAsync(It.IsAny<Expression<Func<XPostComment, bool>>>(), It.IsAny<CancellationToken>()), Times.Once);
         
         Assert.NotNull(result);
         Assert.Empty(result);
@@ -115,7 +112,7 @@ public class GetCommentsOfPostHandlerTest : BasePostHandlerTest
         await Assert.ThrowsAsync<NotFoundException>(() => _handler.Handle(_query, CancellationToken.None));
 
         CacheServiceMock.VerifyCacheHit<List<PostCommentResponseDto>?>(_postCommentsCacheKey, false);
-        PostRepositoryMock.Verify(x => x.ExistsAsync(_post.Id), Times.Once);
-        CommentRepositoryMock.Verify(x => x.GetAllCommentOfPostAsync(It.IsAny<Guid>()), Times.Never);
+        PostRepositoryMock.Verify(x => x.ExistsAsync(_post.Id, It.IsAny<CancellationToken>()), Times.Once);
+        CommentRepositoryMock.Verify(x => x.GetAllAsync(It.IsAny<Expression<Func<XPostComment, bool>>>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 }

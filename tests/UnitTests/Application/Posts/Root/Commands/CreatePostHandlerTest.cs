@@ -28,13 +28,13 @@ public class CreatePostHandlerTest : BasePostHandlerTest
         if (!success)
         {
             PostRepositoryMock.Verify(x => x.Add(It.IsAny<Post>()), Times.Never);
-            PostRepositoryMock.Verify(x => x.SaveChangesAsync(), Times.Never);
+            PostRepositoryMock.Verify(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
             CacheServiceMock.VerifyCacheSet<PostResponseDto?>(happened: false);
             return;
         }
         
         PostRepositoryMock.Verify(x => x.Add(It.IsAny<Post>()), Times.Once);
-        PostRepositoryMock.Verify(x => x.SaveChangesAsync(), Times.Once);
+        PostRepositoryMock.Verify(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
         CacheServiceMock.VerifyCacheSet<PostResponseDto?>();
     }
 
@@ -44,14 +44,14 @@ public class CreatePostHandlerTest : BasePostHandlerTest
         // Arrange
         var command = new CreatePostCommand("Test post text", _user.Id.ToString());
         
-        UserRepositoryMock.SetupUser(_user);
+        UserRepositoryMock.SetupUser(_user, Mapper);
         PostRepositoryMock.SetupSaveChanges();
 
         // Act
         await _createPostHandler.Handle(command, CancellationToken.None);
 
         // Assert
-        UserRepositoryMock.Verify(x => x.GetByIdAsync(_user.Id), Times.Once);
+        UserRepositoryMock.Verify(x => x.GetEntityByIdAsync(_user.Id), Times.Once);
         VerifyPostAdded();
     }
 
@@ -61,13 +61,13 @@ public class CreatePostHandlerTest : BasePostHandlerTest
         // Arrange
         var command = new CreatePostCommand(new string('a', 20001), _user.Id.ToString());
         
-        UserRepositoryMock.SetupUser(_user);
+        UserRepositoryMock.SetupUser(_user, Mapper);
         PostRepositoryMock.SetupSaveChanges();
 
         // Act & Assert
         await Assert.ThrowsAsync<BadRequestException>(() => _createPostHandler.Handle(command, CancellationToken.None));
         
-        UserRepositoryMock.Verify(x => x.GetByIdAsync(_user.Id), Times.Once);
+        UserRepositoryMock.Verify(x => x.GetEntityByIdAsync(_user.Id), Times.Once);
         VerifyPostAdded(success: false);
     }
 
@@ -78,13 +78,13 @@ public class CreatePostHandlerTest : BasePostHandlerTest
         const string invalidUserId = "invalid-guid";
         var command = new CreatePostCommand("Test post text", invalidUserId);
         
-        UserRepositoryMock.SetupUser(_user);
+        UserRepositoryMock.SetupUser(_user, Mapper);
         PostRepositoryMock.SetupSaveChanges();
 
         // Act & Assert
         await Assert.ThrowsAsync<BadRequestException>(() => _createPostHandler.Handle(command, CancellationToken.None));
         
-        UserRepositoryMock.Verify(x => x.GetByIdAsync(It.IsAny<Guid>()), Times.Never);
+        UserRepositoryMock.Verify(x => x.GetEntityByIdAsync(It.IsAny<Guid>()), Times.Never);
         VerifyPostAdded(success: false);
     }
 
@@ -95,13 +95,13 @@ public class CreatePostHandlerTest : BasePostHandlerTest
         var guid = Guid.NewGuid();
         var command = new CreatePostCommand("Test post text", guid.ToString());
         
-        UserRepositoryMock.SetupUser(null);
+        UserRepositoryMock.SetupUser(null, Mapper);
         PostRepositoryMock.SetupSaveChanges();
 
         // Act & Assert
         await Assert.ThrowsAsync<BadRequestException>(() => _createPostHandler.Handle(command, CancellationToken.None));
         
-        UserRepositoryMock.Verify(x => x.GetByIdAsync(guid), Times.Once);
+        UserRepositoryMock.Verify(x => x.GetEntityByIdAsync(guid), Times.Once);
         VerifyPostAdded(success: false);
     }
 }

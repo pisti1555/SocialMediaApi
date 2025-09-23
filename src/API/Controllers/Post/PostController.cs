@@ -39,9 +39,9 @@ public class PostController(IMediator mediator) : BaseApiController
     
     [MapToApiVersion(1)]
     [HttpDelete("{id}")]
-    public async Task<ActionResult> Delete([FromRoute]string id)
+    public async Task<ActionResult> Delete([FromRoute]string id, [FromQuery]string userId)
     {
-        var command = new DeletePostCommand(id);
+        var command = new DeletePostCommand(id, userId);
         await mediator.SendCommandAsync<DeletePostCommand, Unit>(command);
         return Ok();
     }

@@ -19,7 +19,7 @@ public class GetPostByIdHandlerTest : BasePostHandlerTest
 
     public GetPostByIdHandlerTest()
     {
-        _handler = new GetPostByIdHandler(PostRepositoryMock.Object, CacheServiceMock.Object, Mapper);
+        _handler = new GetPostByIdHandler(PostRepositoryMock.Object, CacheServiceMock.Object);
 
         _post = TestDataFactory.CreatePostWithRelations().Post;
         _cachedPost = Mapper.Map<PostResponseDto>(_post);
@@ -47,14 +47,14 @@ public class GetPostByIdHandlerTest : BasePostHandlerTest
     {
         // Arrange
         CacheServiceMock.SetupCache<PostResponseDto?>(_postCacheKey, null);
-        PostRepositoryMock.SetupPost(_post);
+        PostRepositoryMock.SetupPost(_post, Mapper);
 
         // Act
         var result = await _handler.Handle(CreateQuery(), CancellationToken.None);
 
         // Assert
         CacheServiceMock.VerifyCacheHit<PostResponseDto?>(_postCacheKey);
-        PostRepositoryMock.Verify(x => x.GetByIdAsync(_post.Id), Times.Once);
+        PostRepositoryMock.Verify(x => x.GetByIdAsync(_post.Id, It.IsAny<CancellationToken>()), Times.Once);
         
         AssertPostMatch(_post, result);
     }
@@ -64,13 +64,13 @@ public class GetPostByIdHandlerTest : BasePostHandlerTest
     {
         // Arrange
         CacheServiceMock.SetupCache<PostResponseDto?>(_postCacheKey, _cachedPost);
-        PostRepositoryMock.SetupPost(_post);
+        PostRepositoryMock.SetupPost(_post, Mapper);
 
         // Act
         var result = await _handler.Handle(CreateQuery(), CancellationToken.None);
         
         CacheServiceMock.VerifyCacheHit<PostResponseDto?>(_postCacheKey);
-        PostRepositoryMock.Verify(x => x.GetByIdAsync(_post.Id), Times.Never);
+        PostRepositoryMock.Verify(x => x.GetByIdAsync(_post.Id, It.IsAny<CancellationToken>()), Times.Never);
 
         // Assert
         AssertPostMatch(_post, result);
@@ -81,13 +81,13 @@ public class GetPostByIdHandlerTest : BasePostHandlerTest
     {
         // Arrange
         CacheServiceMock.SetupCache<PostResponseDto?>(_postCacheKey, null);
-        PostRepositoryMock.SetupPost(null);
+        PostRepositoryMock.SetupPost(null, Mapper);
 
         // Act & Assert
         await Assert.ThrowsAsync<NotFoundException>(() => _handler.Handle(CreateQuery(), CancellationToken.None));
         
         CacheServiceMock.VerifyCacheHit<PostResponseDto?>(_postCacheKey);
-        PostRepositoryMock.Verify(x => x.GetByIdAsync(_post.Id), Times.Once);
+        PostRepositoryMock.Verify(x => x.GetByIdAsync(_post.Id, It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]
@@ -100,6 +100,6 @@ public class GetPostByIdHandlerTest : BasePostHandlerTest
         await Assert.ThrowsAsync<BadRequestException>(() => _handler.Handle(invalidQuery, CancellationToken.None));
         
         CacheServiceMock.VerifyCacheHit<PostResponseDto?>(_postCacheKey, false);
-        PostRepositoryMock.Verify(x => x.GetByIdAsync(It.IsAny<Guid>()), Times.Never);
+        PostRepositoryMock.Verify(x => x.GetByIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 }

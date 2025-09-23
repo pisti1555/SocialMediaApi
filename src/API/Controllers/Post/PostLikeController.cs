@@ -32,10 +32,10 @@ public class PostLikeController(IMediator mediator) : BaseApiController
     }
     
     [MapToApiVersion(1)]
-    [HttpDelete]
-    public async Task<ActionResult> DislikePost([FromRoute]string postId, [FromQuery]string userId)
+    [HttpDelete("{likeId}")]
+    public async Task<ActionResult> DislikePost([FromRoute]string postId, [FromRoute]string likeId, [FromQuery]string userId)
     {
-        var command = new DislikePostCommand(postId, userId);
+        var command = new DislikePostCommand(postId, likeId, userId);
         await mediator.SendCommandAsync<DislikePostCommand, Unit>(command);
         return Ok();
     }

@@ -130,7 +130,7 @@ public class PostControllerTests(CustomWebApplicationFactoryFixture factory) : B
     {
         var post = await AddPostToDbAsync(PostDataFixture.GetPost(_user));
         
-        var response = await Client.DeleteAsync($"{BaseUrl}/{post.Id}");
+        var response = await Client.DeleteAsync($"{BaseUrl}/{post.Id}?userId={_user.Id.ToString()}");
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
     }
     

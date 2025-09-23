@@ -1,15 +1,16 @@
-﻿using Application.Contracts.Persistence.Repositories.AppUser;
+﻿using Application.Contracts.Persistence.Repositories;
 using Application.Contracts.Services;
 using Application.Responses;
 using AutoMapper;
 using Cortex.Mediator.Commands;
 using Domain.Common.Exceptions.CustomExceptions;
+using Domain.Users;
 using Domain.Users.Factories;
 
 namespace Application.Requests.Users.Root.Commands.CreateUser;
 
 public class CreateUserHandler(
-    IAppUserRepository userRepository,
+    IRepository<AppUser, UserResponseDto> repository,
     ICacheService cache,
     IMapper mapper
 ) : ICommandHandler<CreateUserCommand, UserResponseDto>
@@ -23,9 +24,9 @@ public class CreateUserHandler(
             request.UserName, request.Email, request.FirstName, request.LastName, request.DateOfBirth
         );
         
-        userRepository.Add(user);
+        repository.Add(user);
         
-        if (!await userRepository.SaveChangesAsync())
+        if (!await repository.SaveChangesAsync(cancellationToken))
             throw new BadRequestException("User could not be created.");
         
         var userResponseDto = mapper.Map<UserResponseDto>(user);
@@ -37,12 +38,14 @@ public class CreateUserHandler(
 
     private async Task ThrowIfUserAlreadyExistsByUsername(string username)
     {
-        if (await userRepository.ExistsByUsernameAsync(username))
+        var exists = await repository.ExistsAsync(x => x.UserName == username);
+        if (exists)
             throw new BadRequestException("Username already exists.");
     }
     private async Task ThrowIfUserAlreadyExistsByEmail(string email)
     {
-        if (await userRepository.ExistsByEmailAsync(email))
+        var exists = await repository.ExistsAsync(x => x.Email == email);
+        if (exists)
             throw new BadRequestException("Email already exists.");
     }
 }

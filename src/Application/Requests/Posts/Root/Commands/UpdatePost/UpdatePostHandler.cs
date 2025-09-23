@@ -1,17 +1,18 @@
 ﻿using Application.Common.Helpers;
-using Application.Contracts.Persistence.Repositories.AppUser;
-using Application.Contracts.Persistence.Repositories.Post;
+using Application.Contracts.Persistence.Repositories;
 using Application.Contracts.Services;
 using Application.Responses;
 using AutoMapper;
 using Cortex.Mediator.Commands;
 using Domain.Common.Exceptions.CustomExceptions;
+using Domain.Posts;
+using Domain.Users;
 
 namespace Application.Requests.Posts.Root.Commands.UpdatePost;
 
 public class UpdatePostHandler(
-    IAppUserRepository userRepository,
-    IPostRepository postRepository,
+    IRepository<AppUser, UserResponseDto> userRepository,
+    IRepository<Post, PostResponseDto> postRepository,
     ICacheService cache,
     IMapper mapper
 ) : ICommandHandler<UpdatePostCommand, PostResponseDto>
@@ -21,10 +22,10 @@ public class UpdatePostHandler(
         var userId = Parser.ParseIdOrThrow(request.UserId);
         var postId = Parser.ParseIdOrThrow(request.PostId);
         
-        var user = await userRepository.GetByIdAsync(userId);
+        var user = await userRepository.GetByIdAsync(userId, cancellationToken);
         if (user is null) throw new BadRequestException("User not found.");
         
-        var post = await postRepository.GetByIdAsync(postId);
+        var post = await postRepository.GetEntityByIdAsync(postId);
         if (post is null) throw new NotFoundException("Post not found.");
         
         if (post.UserId != userId) throw new BadRequestException("User does not own the post.");
@@ -33,7 +34,7 @@ public class UpdatePostHandler(
         
         postRepository.Update(post);
         
-        if (!await postRepository.SaveChangesAsync())
+        if (!await postRepository.SaveChangesAsync(cancellationToken))
             throw new BadRequestException("Post could not be updated.");
         
         var postResponseDto = mapper.Map<PostResponseDto>(post);

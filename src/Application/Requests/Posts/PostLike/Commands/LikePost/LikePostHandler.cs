@@ -1,18 +1,21 @@
 ﻿using Application.Common.Helpers;
-using Application.Contracts.Persistence.Repositories.AppUser;
-using Application.Contracts.Persistence.Repositories.Post;
+using Application.Contracts.Persistence.Repositories;
 using Application.Contracts.Services;
 using Application.Responses;
 using AutoMapper;
 using Cortex.Mediator.Commands;
 using Domain.Common.Exceptions.CustomExceptions;
+using Domain.Posts;
 using Domain.Posts.Factories;
+using Domain.Users;
+using XPostLike = Domain.Posts.PostLike;
 
 namespace Application.Requests.Posts.PostLike.Commands.LikePost;
 
 public class LikePostHandler(
-    IPostRepository postRepository,
-    IAppUserRepository userRepository,
+    IRepository<Post, PostResponseDto> postRepository,
+    IRepository<AppUser, UserResponseDto> userRepository,
+    IRepository<XPostLike, PostLikeResponseDto> likeRepository,
     ICacheService cache,
     IMapper mapper
 ) : ICommandHandler<LikePostCommand, PostLikeResponseDto>
@@ -22,23 +25,27 @@ public class LikePostHandler(
         var postGuid = Parser.ParseIdOrThrow(request.PostId);
         var userGuid = Parser.ParseIdOrThrow(request.UserId);
 
-        var post = await postRepository.GetByIdAsync(postGuid);
+        var post = await postRepository.GetEntityByIdAsync(postGuid);
         if (post is null) throw new BadRequestException("Post not found.");
         
-        var user = await userRepository.GetByIdAsync(userGuid);
+        var user = await userRepository.GetEntityByIdAsync(userGuid);
         if (user is null) throw new BadRequestException("User not found.");
 
-        var hasUserLikedPost = await postRepository.LikeRepository.ExistsAsync(postGuid, userGuid);
+        var hasUserLikedPost = await likeRepository.ExistsAsync(x => 
+            x.UserId == userGuid && x.PostId == postGuid, 
+            cancellationToken
+        );
+        
         if (hasUserLikedPost) throw new BadRequestException("User already liked post.");
         
         var like = PostLikeFactory.Create(user, post);
         
         post.UpdateLastInteraction();
         
-        postRepository.LikeRepository.Add(like);
+        likeRepository.Add(like);
         postRepository.Update(post);
         
-        if (!await postRepository.SaveChangesAsync())
+        if (!await postRepository.SaveChangesAsync(cancellationToken))
             throw new BadRequestException("Like could not be created.");
         
         await cache.RemoveAsync($"post-likes-{postGuid.ToString()}", cancellationToken);

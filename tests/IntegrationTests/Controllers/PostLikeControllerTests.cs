@@ -106,15 +106,16 @@ public class PostLikeControllerTests(CustomWebApplicationFactoryFixture factory)
     [Fact]
     public async Task RemoveLike_ShouldReturnOk()
     {
-        await AddLikeToDbAsync(PostLikeDataFixture.GetPostLike(_user, _post));
-        var response = await Client.DeleteAsync($"{PostsBaseUrl}/{_post.Id.ToString()}/likes?userId={_user.Id.ToString()}");
+        var like = await AddLikeToDbAsync(PostLikeDataFixture.GetPostLike(_user, _post));
+        var response = await Client.DeleteAsync($"{PostsBaseUrl}/{_post.Id.ToString()}/likes/{like.Id.ToString()}?userId={_user.Id.ToString()}");
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
     }
 
     [Fact]
     public async Task RemoveLike_WhenPostNotFound_ShouldReturnBadRequest()
     {
-        var response = await Client.DeleteAsync($"{PostsBaseUrl}/{Guid.NewGuid().ToString()}/likes?userId={_user.Id.ToString()}");
+        var unknownId = Guid.NewGuid().ToString();
+        var response = await Client.DeleteAsync($"{PostsBaseUrl}/{Guid.NewGuid().ToString()}/likes/{unknownId}?userId={_user.Id.ToString()}");
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
     }
     

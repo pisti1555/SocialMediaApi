@@ -1,14 +1,18 @@
 ﻿using Application.Common.Helpers;
-using Application.Contracts.Persistence.Repositories.Post;
+using Application.Contracts.Persistence.Repositories;
 using Application.Contracts.Services;
+using Application.Responses;
 using Cortex.Mediator;
 using Cortex.Mediator.Commands;
 using Domain.Common.Exceptions.CustomExceptions;
+using Domain.Posts;
+using XComment = Domain.Posts.PostComment;
 
 namespace Application.Requests.Posts.PostComment.Commands.RemoveCommentFromPost;
 
 public class RemoveCommentFromPostHandler(
-    IPostRepository postRepository,
+    IRepository<Post, PostResponseDto> postRepository,
+    IRepository<XComment, PostCommentResponseDto> commentRepository,
     ICacheService cache
     ) : ICommandHandler<RemoveCommentFromPostCommand, Unit>
 {
@@ -18,10 +22,10 @@ public class RemoveCommentFromPostHandler(
         var userGuid = Parser.ParseIdOrThrow(request.UserId);
         var commentGuid = Parser.ParseIdOrThrow(request.CommentId);
         
-        var post = await postRepository.GetByIdAsync(postGuid);
+        var post = await postRepository.GetEntityByIdAsync(postGuid);
         if (post is null) throw new BadRequestException("Post not found.");
         
-        var comment = await postRepository.CommentRepository.GetByIdAsync(commentGuid);
+        var comment = await commentRepository.GetEntityByIdAsync(commentGuid);
         if (comment is null) throw new BadRequestException("Comment not found.");
         
         if (comment.PostId != postGuid) throw new BadRequestException("Post does not own the comment.");
@@ -29,10 +33,10 @@ public class RemoveCommentFromPostHandler(
         
         post.UpdateLastInteraction();
         
-        postRepository.CommentRepository.Delete(comment);
+        commentRepository.Delete(comment);
         postRepository.Update(post);
 
-        if (!await postRepository.SaveChangesAsync())
+        if (!await postRepository.SaveChangesAsync(cancellationToken))
             throw new BadRequestException("Comment could not be deleted.");
         
         await cache.RemoveAsync($"post-comments-{postGuid.ToString()}", cancellationToken);
