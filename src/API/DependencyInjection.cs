@@ -1,5 +1,6 @@
 ﻿using Asp.Versioning;
 using Microsoft.AspNetCore.Http.Features;
+using Microsoft.AspNetCore.Mvc;
 
 namespace API;
 
@@ -7,7 +8,22 @@ public static class DependencyInjection
 {
     public static IServiceCollection AddApi(this IServiceCollection services)
     {
-        services.AddControllers();
+        services.AddControllers()
+            .ConfigureApiBehaviorOptions(options =>
+                options.InvalidModelStateResponseFactory = context =>
+                {
+                    var problemDetails = new ProblemDetails
+                    {
+                        Type = "https://httpstatuses.com/422",
+                        Status = StatusCodes.Status422UnprocessableEntity,
+                        Title = "Invalid request.",
+                        Detail = "The request was unprocessable.",
+                        Instance = $"{context.HttpContext.Request.Method} {context.HttpContext.Request.Path}"
+                    };
+
+                    return new UnprocessableEntityObjectResult(problemDetails);
+                });
+        
         services.AddCors(options =>
         {
             options.AddDefaultPolicy(builder => 

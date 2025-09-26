@@ -74,7 +74,7 @@ public class DislikePostHandlerTest : BasePostHandlerTest
     }
 
     [Fact]
-    public async Task Handle_WhenLikeDoesNotExist_ShouldThrowBadRequestException()
+    public async Task Handle_WhenLikeDoesNotExist_ShouldThrowNotFoundException()
     {
         // Arrange
         var likeId = Guid.NewGuid();
@@ -85,7 +85,7 @@ public class DislikePostHandlerTest : BasePostHandlerTest
         var previousLastInteraction = _post.LastInteraction;
 
         // Act & Assert
-        await Assert.ThrowsAsync<BadRequestException>(() => _handler.Handle(command, CancellationToken.None));
+        await Assert.ThrowsAsync<NotFoundException>(() => _handler.Handle(command, CancellationToken.None));
 
         LikeRepositoryMock.Verify(x => x.GetEntityByIdAsync(likeId), Times.Once);
         
@@ -93,7 +93,7 @@ public class DislikePostHandlerTest : BasePostHandlerTest
     }
 
     [Fact]
-    public async Task Handle_WhenPostDoesNotExist_ShouldThrowBadRequestException()
+    public async Task Handle_WhenPostDoesNotExist_ShouldThrowNotFoundException()
     {
         // Arrange
         var like = TestDataFactory.CreateLike(_post, _user);
@@ -106,7 +106,7 @@ public class DislikePostHandlerTest : BasePostHandlerTest
         var previousLastInteraction = _post.LastInteraction;
 
         // Act & Assert
-        await Assert.ThrowsAsync<BadRequestException>(() => _handler.Handle(command, CancellationToken.None));
+        await Assert.ThrowsAsync<NotFoundException>(() => _handler.Handle(command, CancellationToken.None));
 
         LikeRepositoryMock.Verify(x => x.GetEntityByIdAsync(like.Id), Times.Once);
         UserRepositoryMock.Verify(x => x.GetEntityByIdAsync(_user.Id), Times.Once);

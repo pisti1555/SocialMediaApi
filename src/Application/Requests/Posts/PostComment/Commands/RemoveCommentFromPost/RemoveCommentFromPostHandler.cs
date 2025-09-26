@@ -23,10 +23,10 @@ public class RemoveCommentFromPostHandler(
         var commentGuid = Parser.ParseIdOrThrow(request.CommentId);
         
         var post = await postRepository.GetEntityByIdAsync(postGuid);
-        if (post is null) throw new BadRequestException("Post not found.");
+        if (post is null) throw new NotFoundException("Post not found.");
         
         var comment = await commentRepository.GetEntityByIdAsync(commentGuid);
-        if (comment is null) throw new BadRequestException("Comment not found.");
+        if (comment is null) throw new NotFoundException("Comment not found.");
         
         if (comment.PostId != postGuid) throw new BadRequestException("Post does not own the comment.");
         if (comment.UserId != userGuid) throw new BadRequestException("User does not own the comment.");

@@ -59,7 +59,7 @@ public class PostControllerTests(CustomWebApplicationFactoryFixture factory) : B
     }
     
     [Fact]
-    public async Task Create_ShouldReturnCreatedResponse_WithLocationHeader_AndPostDto()
+    public async Task Create_WhenValidRequest_ShouldReturnCreatedResponse_WithLocationHeader_AndPostDto()
     {
         var dto = new CreatePostDto("Test text", _user.Id.ToString());
         
@@ -84,19 +84,22 @@ public class PostControllerTests(CustomWebApplicationFactoryFixture factory) : B
     }
     
     [Fact]
-    public async Task Create_ShouldReturnBadRequestResponse_WhenUserNotFound()
+    public async Task Create_WhenUserNotFound_ShouldReturnBadRequestResponse()
     {
-        var dto = new CreatePostDto("Test text", Guid.NewGuid().ToString());
+        var notExistingUserId = Guid.NewGuid().ToString();
+        var dto = new CreatePostDto("Test text", notExistingUserId);
+        
         var response = await Client.PostAsJsonAsync(BaseUrl, dto);
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
     }
     
     [Fact]
-    public async Task Update_ShouldReturnOkResponse_WithPostDto()
+    public async Task Update_WhenValidRequest_ShouldReturnUpdatedPost()
     {
         var post = await AddPostToDbAsync(PostDataFixture.GetPost(_user));
         
         var dto = new UpdatePostDto("Updated text", _user.Id.ToString());
+        
         var response = await Client.PatchAsJsonAsync($"{BaseUrl}/{post.Id.ToString()}", dto);
         var result = await response.Content.ReadFromJsonAsync<PostResponseDto>();
         
@@ -107,26 +110,29 @@ public class PostControllerTests(CustomWebApplicationFactoryFixture factory) : B
     }
     
     [Fact]
-    public async Task Update_WhenPostNotFound_ShouldReturnNotFoundResponse()
+    public async Task Update_WhenPostNotFound_ShouldReturnNotFound()
     {
+        var notExistingPostId = Guid.NewGuid().ToString();
         var dto = new UpdatePostDto("Updated text", _user.Id.ToString());
-        var response = await Client.PatchAsJsonAsync($"{BaseUrl}/{Guid.NewGuid().ToString()}", dto);
+        
+        var response = await Client.PatchAsJsonAsync($"{BaseUrl}/{notExistingPostId}", dto);
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
     
     [Fact]
-    public async Task Update_WhenUserDoesNotOwnPost_ShouldReturnBadRequestResponse()
+    public async Task Update_WhenUserDoesNotOwnPost_ShouldReturnBadRequest()
     {
         var otherUser = AppUserDataFixture.GetUser();
         var post = await AddPostToDbAsync(PostDataFixture.GetPost(otherUser));
         
         var dto = new UpdatePostDto("Updated text", _user.Id.ToString());
+        
         var response = await Client.PatchAsJsonAsync($"{BaseUrl}/{post.Id.ToString()}", dto);
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
     }
 
     [Fact]
-    public async Task Delete_ShouldReturnOkResponse()
+    public async Task Delete_WhenValidRequest_ShouldReturnOk()
     {
         var post = await AddPostToDbAsync(PostDataFixture.GetPost(_user));
         
@@ -135,14 +141,16 @@ public class PostControllerTests(CustomWebApplicationFactoryFixture factory) : B
     }
     
     [Fact]
-    public async Task Delete_WhenPostNotFound_ShouldReturnBadRequestResponse()
+    public async Task Delete_WhenPostNotFound_ShouldReturnBadRequest()
     {
-        var response = await Client.DeleteAsync($"{BaseUrl}/{Guid.NewGuid().ToString()}");
+        var notExistingPostId = Guid.NewGuid().ToString();
+        
+        var response = await Client.DeleteAsync($"{BaseUrl}/{notExistingPostId}");
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
     }
     
     [Fact]
-    public async Task GetById_ShouldSaveToCache_ThenReturnPostResponseDto()
+    public async Task GetById_WhenExistsById_ShouldSaveToCache_ThenReturnPost()
     {
         var post = await AddPostToDbAsync(PostDataFixture.GetPost(_user));
         
@@ -160,14 +168,16 @@ public class PostControllerTests(CustomWebApplicationFactoryFixture factory) : B
     }
     
     [Fact]
-    public async Task GetById_WhenPostNotFound_ShouldReturnNotFoundResponse()
+    public async Task GetById_WhenPostNotFound_ShouldReturnNotFound()
     {
-        var response = await Client.GetAsync($"{BaseUrl}/{Guid.NewGuid().ToString()}");
+        var notExistingPostId = Guid.NewGuid().ToString();
+        
+        var response = await Client.GetAsync($"{BaseUrl}/{notExistingPostId}");
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
     
     [Fact]
-    public async Task GetAllPaged_ShouldCacheResult_ThenReturnListWith1Post()
+    public async Task GetAllPaged_When1PostExistInCache_ShouldCacheResult_ThenReturnListWith1Post()
     {
         await AddPostToDbAsync(PostDataFixture.GetPost(_user));
         
@@ -185,7 +195,7 @@ public class PostControllerTests(CustomWebApplicationFactoryFixture factory) : B
     }
 
     [Fact]
-    public async Task GetAllPaged_ShouldCacheResult_ThenReturnEmptyList()
+    public async Task GetAllPaged_WhenNoPostsExist_ShouldCacheResult_ThenReturnEmptyList()
     {
         var response = await Client.GetAsync($"{BaseUrl}?pageNumber=1&pageSize=10");
         var result = await response.Content.ReadFromJsonAsync<PagedResult<PostResponseDto>>();

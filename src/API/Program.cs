@@ -27,17 +27,26 @@ builder.Services.AddApi();
 
 var app = builder.Build();
 
-app.UseForwardedHeaders(new ForwardedHeadersOptions 
-    { ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto });
+app.UseForwardedHeaders(new ForwardedHeadersOptions
+{
+    ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto
+});
+
+app.UseCors();
 
 app.UseStaticFiles();
 app.UseSerilogRequestLogging();
 app.UseMiddleware<ErrorHandlerMiddleware>();
-app.UseCors();
-app.MapControllers();
 
+app.MapControllers();
 app.MapOpenApi();
-app.MapScalarApiReference();
+app.MapScalarApiReference("/scalar", (options, context) =>
+{
+    options.Servers = [];
+    
+    options.Title = "Social Media API";
+    options.BaseServerUrl = $"{context.Request.Scheme}://{context.Request.Host.Value}";
+});
 
 // Migrate database
 using (var scope = app.Services.CreateScope())

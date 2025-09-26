@@ -1,4 +1,5 @@
-﻿using FluentValidation;
+﻿using Application.Common.Extensions;
+using FluentValidation;
 
 namespace Application.Requests.Posts.PostComment.Commands.AddCommentToPost;
 
@@ -7,15 +8,14 @@ public class AddCommentToPostValidator : AbstractValidator<AddCommentToPostComma
     public AddCommentToPostValidator()
     {
         RuleFor(x => x.PostId)
-            .NotNull().WithMessage("PostId is required")
-            .NotEmpty().WithMessage("PostId is required");
+            .NotEmpty().WithMessage("PostId is required")
+            .MustBeParsableGuid();
         
         RuleFor(x => x.UserId)
-            .NotNull().WithMessage("UserId is required")
-            .NotEmpty().WithMessage("UserId is required");
+            .NotEmpty().WithMessage("UserId is required")
+            .MustBeParsableGuid();
         
         RuleFor(x => x.Text)
-            .NotNull().WithMessage("Text is required")
             .NotEmpty().WithMessage("Text is required")
             .MaximumLength(1000).WithMessage("Text is too long");
     }

@@ -43,7 +43,7 @@ public class PostCommentControllerTests(CustomWebApplicationFactoryFixture facto
     }
 
     [Fact]
-    public async Task GetCommentsOfPost_ShouldCacheResult_ThenReturnFullList()
+    public async Task GetCommentsOfPost_WhenCommentsExist_ShouldCacheResult_ThenReturnFullList()
     {
         var comment = await AddCommentToDbAsync(PostCommentDataFixture.GetPostComment(_user, _post));
         
@@ -76,7 +76,7 @@ public class PostCommentControllerTests(CustomWebApplicationFactoryFixture facto
     }
 
     [Fact]
-    public async Task AddComment_ShouldAddComment_ThenReturnPostCommentDto()
+    public async Task AddComment_WenValidRequest_ShouldSaveCommentToDatabase_ThenReturnPost()
     {
         var dto = new AddCommentToPostDto(_user.Id.ToString(), "Test text");
         
@@ -98,14 +98,17 @@ public class PostCommentControllerTests(CustomWebApplicationFactoryFixture facto
     }
     
     [Fact]
-    public async Task AddComment_WhenPostNotFound_ShouldReturnBadRequest()
+    public async Task AddComment_WhenPostNotFound_ShouldReturnNotFound()
     {
-        var response = await Client.PostAsJsonAsync($"{PostsBaseUrl}/{Guid.NewGuid().ToString()}/comments", _user.Id.ToString());
-        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        var notExistingPostId = Guid.NewGuid().ToString();
+        var addCommentDto = new AddCommentToPostDto(_user.Id.ToString(), "Test text");
+        
+        var response = await Client.PostAsJsonAsync($"{PostsBaseUrl}/{notExistingPostId}/comments", addCommentDto);
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
     
     [Fact]
-    public async Task UpdateComment_ShouldUpdateComment_ThenReturnPostCommentDto()
+    public async Task UpdateComment_WhenValidRequest_ShouldUpdateComment_ThenReturnComment()
     {
         var comment = await AddCommentToDbAsync(PostCommentDataFixture.GetPostComment(_user, _post));
         var dto = new UpdateCommentOfPostDto(_user.Id.ToString(), "Updated text");
@@ -118,25 +121,28 @@ public class PostCommentControllerTests(CustomWebApplicationFactoryFixture facto
     }
     
     [Fact]
-    public async Task UpdateComment_WhenPostNotFound_ShouldReturnBadRequest()
+    public async Task UpdateComment_WhenPostNotFound_ShouldReturnNotFound()
     {
-        var guid = Guid.NewGuid().ToString();
+        var notExistingPostId = Guid.NewGuid().ToString();
         var commentId = PostCommentDataFixture.GetPostComment(_user, _post).Id.ToString();
+        var updateCommentDto = new UpdateCommentOfPostDto(_user.Id.ToString(), "Updated text");
         
-        var response = await Client.PatchAsJsonAsync($"{PostsBaseUrl}/{guid}/comments/{commentId}", _user.Id.ToString());
-        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        var response = await Client.PatchAsJsonAsync($"{PostsBaseUrl}/{notExistingPostId}/comments/{commentId}", updateCommentDto);
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
     
     [Fact]
-    public async Task UpdateComment_WhenCommentNotFound_ShouldReturnBadRequest()
+    public async Task UpdateComment_WhenCommentNotFound_ShouldReturnNotFound()
     {
-        var guid = Guid.NewGuid().ToString();
-        var response = await Client.PatchAsJsonAsync($"{PostsBaseUrl}/{_post.Id.ToString()}/comments/{guid}", _user.Id.ToString());
-        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        var notExistingCommentId = Guid.NewGuid().ToString();
+        var updateCommentDto = new UpdateCommentOfPostDto(_user.Id.ToString(), "Updated text");
+        
+        var response = await Client.PatchAsJsonAsync($"{PostsBaseUrl}/{_post.Id.ToString()}/comments/{notExistingCommentId}", updateCommentDto);
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
     
     [Fact]
-    public async Task RemoveComment_ShouldReturnOk()
+    public async Task RemoveComment_WhenValidRequest_ShouldReturnOk()
     {
         await AddCommentToDbAsync(PostCommentDataFixture.GetPostComment(_user, _post));
         
@@ -149,17 +155,22 @@ public class PostCommentControllerTests(CustomWebApplicationFactoryFixture facto
     }
 
     [Fact]
-    public async Task RemoveComment_WhenPostNotFound_ShouldReturnBadRequest()
+    public async Task RemoveComment_WhenPostNotFound_ShouldReturnNotFound()
     {
-        var response = await Client.DeleteAsync($"{PostsBaseUrl}/{Guid.NewGuid().ToString()}/comments/{Guid.NewGuid().ToString()}?userId={_user.Id.ToString()}");
-        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        var notExistingPostId = Guid.NewGuid().ToString();
+        var notExistingCommentId = Guid.NewGuid().ToString();
+        
+        var response = await Client.DeleteAsync($"{PostsBaseUrl}/{notExistingPostId}/comments/{notExistingCommentId}?userId={_user.Id.ToString()}");
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
     
     [Fact]
-    public async Task RemoveComment_WhenCommentNotFound_ShouldReturnBadRequest()
+    public async Task RemoveComment_WhenCommentNotFound_ShouldReturnNotFound()
     {
-        var response = await Client.DeleteAsync($"{PostsBaseUrl}/{_post.Id.ToString()}/comments/{Guid.NewGuid().ToString()}?userId={_user.Id.ToString()}");
-        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        var notExistingCommentId = Guid.NewGuid().ToString();
+        
+        var response = await Client.DeleteAsync($"{PostsBaseUrl}/{_post.Id.ToString()}/comments/{notExistingCommentId}?userId={_user.Id.ToString()}");
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
     
     public async Task InitializeAsync()

@@ -25,7 +25,7 @@ public class DislikePostHandler(
         var likeGuid = Parser.ParseIdOrThrow(request.LikeId);
         
         var like = await likeRepository.GetEntityByIdAsync(likeGuid);
-        if (like is null) throw new BadRequestException("Like not found.");
+        if (like is null) throw new NotFoundException("Like not found.");
         
         if (like.UserId != userGuid) throw new BadRequestException("User does not own the like.");
         if (like.PostId != postGuid) throw new BadRequestException("Post does not own the like.");
@@ -34,7 +34,7 @@ public class DislikePostHandler(
         if (user is null) throw new BadRequestException("User not found.");
         
         var post = await postRepository.GetEntityByIdAsync(postGuid);
-        if (post is null) throw new BadRequestException("Post not found.");
+        if (post is null) throw new NotFoundException("Post not found.");
         
         post.UpdateLastInteraction();
         

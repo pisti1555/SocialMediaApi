@@ -38,8 +38,6 @@ public class GetPostByIdHandlerTest : BasePostHandlerTest
         Assert.Equal(expected.User.UserName, actual.UserName);
         Assert.Equal(expected.Comments.Count, actual.CommentsCount);
         Assert.Equal(expected.Likes.Count, actual.LikesCount);
-        Assert.Equal(expected.Comments.Select(x => x.Id).ToList(), actual.Comments.Select(x => x.Id).ToList());
-        Assert.Equal(expected.Likes.Select(x => x.Id).ToList(), actual.Likes.Select(x => x.Id).ToList());
     }
 
     [Fact]

@@ -17,37 +17,48 @@ public class PostCommentController(IMediator mediator) : BaseApiController
 {
     [MapToApiVersion(1)]
     [HttpGet]
-    public async Task<ActionResult<List<PostCommentResponseDto>>> GetCommentsOfPost([FromRoute]string postId)
+    public async Task<ActionResult<List<PostCommentResponseDto>>> GetCommentsOfPost([FromRoute]string postId, CancellationToken ct)
     {
         var command = new GetCommentsOfPostQuery(postId);
-        var result = await mediator.SendQueryAsync<GetCommentsOfPostQuery, List<PostCommentResponseDto>>(command);
+        var result = await mediator.SendQueryAsync<GetCommentsOfPostQuery, List<PostCommentResponseDto>>(command, ct);
         return Ok(result);
     }
     
     [MapToApiVersion(1)]
     [HttpPost]
-    public async Task<ActionResult<PostCommentResponseDto>> AddComment([FromRoute]string postId, [FromBody]AddCommentToPostDto dto)
+    public async Task<ActionResult<PostCommentResponseDto>> AddComment([FromRoute]string postId, [FromBody]AddCommentToPostDto dto, CancellationToken ct)
     {
-        var command = new AddCommentToPostCommand(postId, dto.UserId, dto.Text);
-        var result = await mediator.SendCommandAsync<AddCommentToPostCommand, PostCommentResponseDto>(command);
+        var command = new AddCommentToPostCommand(
+            postId, 
+            dto.UserId ?? string.Empty, 
+            dto.Text ?? string.Empty
+        );
+        
+        var result = await mediator.SendCommandAsync<AddCommentToPostCommand, PostCommentResponseDto>(command, ct);
         return Ok(result);
     }
     
     [MapToApiVersion(1)]
     [HttpPatch("{commentId}")]
-    public async Task<ActionResult<PostCommentResponseDto>> UpdateComment([FromRoute]string postId, [FromRoute]string commentId, [FromBody]UpdateCommentOfPostDto dto)
+    public async Task<ActionResult<PostCommentResponseDto>> UpdateComment([FromRoute]string postId, [FromRoute]string commentId, [FromBody]UpdateCommentOfPostDto dto, CancellationToken ct)
     {
-        var command = new UpdateCommentOfPostCommand(postId, commentId, dto.UserId, dto.Text);
-        var result = await mediator.SendCommandAsync<UpdateCommentOfPostCommand, PostCommentResponseDto>(command);
+        var command = new UpdateCommentOfPostCommand(
+            postId, 
+            commentId, 
+            dto.UserId ?? string.Empty, 
+            dto.Text ?? string.Empty
+        );
+        
+        var result = await mediator.SendCommandAsync<UpdateCommentOfPostCommand, PostCommentResponseDto>(command, ct);
         return Ok(result);
     }
     
     [MapToApiVersion(1)]
     [HttpDelete("{commentId}")]
-    public async Task<ActionResult> DeleteComment([FromRoute]string postId, [FromRoute]string commentId, [FromQuery]string userId)
+    public async Task<ActionResult> DeleteComment([FromRoute]string postId, [FromRoute]string commentId, [FromQuery]string userId, CancellationToken ct)
     {
         var command = new RemoveCommentFromPostCommand(postId, commentId, userId);
-        await mediator.SendCommandAsync<RemoveCommentFromPostCommand, Unit>(command);
+        await mediator.SendCommandAsync<RemoveCommentFromPostCommand, Unit>(command, ct);
         return Ok();
     }
 }

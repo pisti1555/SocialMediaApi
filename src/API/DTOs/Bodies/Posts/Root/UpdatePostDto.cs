@@ -1,3 +1,6 @@
 ﻿namespace API.DTOs.Bodies.Posts.Root;
 
-public record UpdatePostDto(string Text, string UserId);
+public record UpdatePostDto(
+    string? Text, 
+    string? UserId
+);

@@ -1,3 +1,6 @@
 ﻿namespace API.DTOs.Bodies.Posts.Root;
 
-public record CreatePostDto(string Text, string UserId);
+public record CreatePostDto(
+    string? Text, 
+    string? UserId
+);

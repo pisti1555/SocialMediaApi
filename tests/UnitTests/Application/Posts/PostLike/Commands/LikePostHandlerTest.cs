@@ -77,7 +77,7 @@ public class LikePostHandlerTest : BasePostHandlerTest
     }
 
     [Fact]
-    public async Task Handle_WhenUserAlreadyLikedPost_ShouldThrowBadRequestException()
+    public async Task Handle_WhenUserAlreadyLikedPost_ShouldThrowConflictException()
     {
         // Arrange
         var command = new LikePostCommand(_user.Id.ToString(), _post.Id.ToString());
@@ -90,7 +90,7 @@ public class LikePostHandlerTest : BasePostHandlerTest
         var previousLastInteraction = _post.LastInteraction;
 
         // Act & Assert
-        await Assert.ThrowsAnyAsync<BadRequestException>(() => _handler.Handle(command, CancellationToken.None));
+        await Assert.ThrowsAnyAsync<ConflictException>(() => _handler.Handle(command, CancellationToken.None));
 
         PostRepositoryMock.Verify(x => x.GetEntityByIdAsync(_post.Id), Times.Once);
         UserRepositoryMock.Verify(x => x.GetEntityByIdAsync(_user.Id), Times.Once);
@@ -100,7 +100,7 @@ public class LikePostHandlerTest : BasePostHandlerTest
     }
 
     [Fact]
-    public async Task Handle_WhenPostDoesNotExist_ShouldThrowBadRequestException()
+    public async Task Handle_WhenPostDoesNotExist_ShouldThrowNotFoundException()
     {
         // Arrange
         var command = new LikePostCommand(_user.Id.ToString(), _post.Id.ToString());
@@ -111,7 +111,7 @@ public class LikePostHandlerTest : BasePostHandlerTest
         var previousLastInteraction = _post.LastInteraction;
 
         // Act & Assert
-        await Assert.ThrowsAnyAsync<BadRequestException>(() => _handler.Handle(command, CancellationToken.None));
+        await Assert.ThrowsAnyAsync<NotFoundException>(() => _handler.Handle(command, CancellationToken.None));
 
         PostRepositoryMock.Verify(x => x.GetEntityByIdAsync(_post.Id), Times.Once);
         LikeRepositoryMock.Verify(x => x.ExistsAsync(It.IsAny<Expression<Func<XPostLike, bool>>>(), It.IsAny<CancellationToken>()), Times.Never);

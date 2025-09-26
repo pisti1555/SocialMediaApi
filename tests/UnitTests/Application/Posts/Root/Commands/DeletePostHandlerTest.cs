@@ -85,7 +85,7 @@ public class DeletePostHandlerTest : BasePostHandlerTest
     }
 
     [Fact]
-    public async Task Handle_WhenPostDoesNotExist_ShouldThrowBadRequestException()
+    public async Task Handle_WhenPostDoesNotExist_ShouldThrowNotFoundException()
     {
         // Arrange
         var command = new DeletePostCommand(_post.Id.ToString(), _user.Id.ToString());
@@ -95,7 +95,7 @@ public class DeletePostHandlerTest : BasePostHandlerTest
         PostRepositoryMock.SetupSaveChanges();
 
         // Act & Assert
-        await Assert.ThrowsAsync<BadRequestException>(() => _deletePostHandler.Handle(command, CancellationToken.None));
+        await Assert.ThrowsAsync<NotFoundException>(() => _deletePostHandler.Handle(command, CancellationToken.None));
         
         PostRepositoryMock.Verify(x => x.ExistsAsync(It.IsAny<Expression<Func<Post, bool>>>(), It.IsAny<CancellationToken>()), Times.Never);
         AssertPostDeleted(_post, false);

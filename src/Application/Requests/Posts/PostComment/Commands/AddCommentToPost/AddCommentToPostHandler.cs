@@ -29,7 +29,7 @@ public class AddCommentToPostHandler(
         if (user is null) throw new BadRequestException("User not found.");
         
         var post = await postRepository.GetEntityByIdAsync(postGuid);
-        if (post is null) throw new BadRequestException("Post not found.");
+        if (post is null) throw new NotFoundException("Post not found.");
         
         var comment = PostCommentFactory.Create(request.Text, user, post);
         

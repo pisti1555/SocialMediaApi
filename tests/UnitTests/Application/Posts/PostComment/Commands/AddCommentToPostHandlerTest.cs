@@ -110,7 +110,7 @@ public class AddCommentToPostHandlerTest : BasePostHandlerTest
     }
 
     [Fact]
-    public async Task Handle_WhenPostDoesNotExist_ShouldThrowBadRequestException()
+    public async Task Handle_WhenPostDoesNotExist_ShouldThrowNotFoundException()
     {
         // Arrange
         var notExistingPostId = Guid.NewGuid();
@@ -121,7 +121,7 @@ public class AddCommentToPostHandlerTest : BasePostHandlerTest
         PostRepositoryMock.SetupSaveChanges();
 
         // Act & Assert
-        await Assert.ThrowsAsync<BadRequestException>(() => _handler.Handle(command, CancellationToken.None));
+        await Assert.ThrowsAsync<NotFoundException>(() => _handler.Handle(command, CancellationToken.None));
 
         UserRepositoryMock.Verify(x => x.GetEntityByIdAsync(_user.Id), Times.Once);
         PostRepositoryMock.Verify(x => x.GetEntityByIdAsync(notExistingPostId), Times.Once);

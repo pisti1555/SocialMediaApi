@@ -8,9 +8,6 @@ public class PostResponseDto
     public required string Text { get; init; }
     public required DateTime CreatedAt { get; init; }
     
-    public required List<PostCommentResponseDto> Comments { get; init; }
     public required int CommentsCount { get; init; }
-    
-    public required List<PostLikeResponseDto> Likes { get; init; }
     public required int LikesCount { get; init; }
 }

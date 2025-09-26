@@ -26,7 +26,7 @@ public class LikePostHandler(
         var userGuid = Parser.ParseIdOrThrow(request.UserId);
 
         var post = await postRepository.GetEntityByIdAsync(postGuid);
-        if (post is null) throw new BadRequestException("Post not found.");
+        if (post is null) throw new NotFoundException("Post not found.");
         
         var user = await userRepository.GetEntityByIdAsync(userGuid);
         if (user is null) throw new BadRequestException("User not found.");
@@ -36,7 +36,7 @@ public class LikePostHandler(
             cancellationToken
         );
         
-        if (hasUserLikedPost) throw new BadRequestException("User already liked post.");
+        if (hasUserLikedPost) throw new ConflictException("Already liked post.");
         
         var like = PostLikeFactory.Create(user, post);
         

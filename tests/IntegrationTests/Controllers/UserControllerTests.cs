@@ -18,7 +18,7 @@ public class UserControllerTests(CustomWebApplicationFactoryFixture factory) : B
     [Fact]
     public async Task Create_WhenValidRequest_ShouldCreateAndCacheUser_ThenReturnCreatedResponse_WithLocationHeader_AndUserDto()
     {
-        var command = new CreateUserCommand("test", "test@email.com", "test", "test", DateOnly.Parse("2000-01-01"));
+        var command = new CreateUserCommand("test", "test@email.com", "test", "test", "2000-01-01");
         
         var response = await Client.PostAsJsonAsync(BaseUrl, command);
         var result = await response.Content.ReadFromJsonAsync<UserResponseDto>();

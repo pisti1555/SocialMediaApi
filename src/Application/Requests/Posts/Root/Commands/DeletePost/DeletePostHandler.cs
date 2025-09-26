@@ -20,7 +20,7 @@ public class DeletePostHandler(
         var userId = Parser.ParseIdOrThrow(request.UserId);
         
         var post = await repository.GetEntityByIdAsync(postId);
-        if (post is null) throw new BadRequestException("Post not found.");
+        if (post is null) throw new NotFoundException("Post not found.");
         
         var exists = await repository.ExistsAsync(x => x.UserId == userId && x.Id == postId, cancellationToken);
         if (!exists) throw new BadRequestException("User does not own the post.");

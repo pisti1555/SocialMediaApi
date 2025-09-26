@@ -21,43 +21,52 @@ public class PostController(IMediator mediator) : BaseApiController
 {
     [MapToApiVersion(1)]
     [HttpPost]
-    public async Task<ActionResult<PostResponseDto>> Create([FromBody]CreatePostDto dto)
+    public async Task<ActionResult<PostResponseDto>> Create([FromBody]CreatePostDto dto, CancellationToken ct)
     {
-        var command = new CreatePostCommand(dto.Text, dto.UserId);
-        var result = await mediator.SendCommandAsync<CreatePostCommand, PostResponseDto>(command);
+        var command = new CreatePostCommand(
+            dto.Text ?? string.Empty, 
+            dto.UserId ?? string.Empty
+        );
+        
+        var result = await mediator.SendCommandAsync<CreatePostCommand, PostResponseDto>(command, ct);
         return CreatedAtAction(nameof(GetById), new {id = result.Id}, result);
     }
 
     [MapToApiVersion(1)]
     [HttpPatch("{id}")]
-    public async Task<ActionResult<PostResponseDto>> Update([FromRoute]string id, [FromBody]UpdatePostDto dto)
+    public async Task<ActionResult<PostResponseDto>> Update([FromRoute]string id, [FromBody]UpdatePostDto dto, CancellationToken ct)
     {
-        var command = new UpdatePostCommand(id, dto.UserId, dto.Text);
-        var result = await mediator.SendCommandAsync<UpdatePostCommand, PostResponseDto>(command);
+        var command = new UpdatePostCommand(
+            id, 
+            dto.UserId ?? string.Empty, 
+            dto.Text ?? string.Empty
+        );
+        
+        var result = await mediator.SendCommandAsync<UpdatePostCommand, PostResponseDto>(command, ct);
         return Ok(result);
     }
     
     [MapToApiVersion(1)]
     [HttpDelete("{id}")]
-    public async Task<ActionResult> Delete([FromRoute]string id, [FromQuery]string userId)
+    public async Task<ActionResult> Delete([FromRoute]string id, [FromQuery]string? userId, CancellationToken ct)
     {
-        var command = new DeletePostCommand(id, userId);
-        await mediator.SendCommandAsync<DeletePostCommand, Unit>(command);
+        var command = new DeletePostCommand(id, userId ?? string.Empty);
+        await mediator.SendCommandAsync<DeletePostCommand, Unit>(command, ct);
         return Ok();
     }
     
     [MapToApiVersion(1)]
     [HttpGet("{id}")]
-    public async Task<ActionResult<PostResponseDto>> GetById([FromRoute]string id)
+    public async Task<ActionResult<PostResponseDto>> GetById([FromRoute]string id, CancellationToken ct)
     {
         var query = new GetPostByIdQuery(id);
-        var result = await mediator.SendQueryAsync<GetPostByIdQuery, PostResponseDto>(query);
+        var result = await mediator.SendQueryAsync<GetPostByIdQuery, PostResponseDto>(query, ct);
         return Ok(result);
     }
     
     [MapToApiVersion(1)]
     [HttpGet]
-    public async Task<ActionResult<PagedResult<PostResponseDto>>> GetAllPaged([FromQuery]PaginationParams pagination)
+    public async Task<ActionResult<PagedResult<PostResponseDto>>> GetAllPaged([FromQuery]PaginationParams pagination, CancellationToken ct)
     {
         var query = new GetAllPostsPagedQuery
         {
@@ -65,7 +74,7 @@ public class PostController(IMediator mediator) : BaseApiController
             PageSize = pagination.PageSize
         };
         
-        var result = await mediator.SendQueryAsync<GetAllPostsPagedQuery, PagedResult<PostResponseDto>>(query);
+        var result = await mediator.SendQueryAsync<GetAllPostsPagedQuery, PagedResult<PostResponseDto>>(query, ct);
         Response.AddPaginationHeaders(result);
         
         return Ok(result);

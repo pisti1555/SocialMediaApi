@@ -70,7 +70,7 @@ public class RemoveCommentFromPostHandlerTest : BasePostHandlerTest
     }
 
     [Fact]
-    public async Task Handle_WhenPostDoesNotExist_ShouldThrowBadRequestException()
+    public async Task Handle_WhenPostDoesNotExist_ShouldThrowNotFoundException()
     {
         // Arrange
         var commentId = Guid.NewGuid();
@@ -82,7 +82,7 @@ public class RemoveCommentFromPostHandlerTest : BasePostHandlerTest
         var previousLastInteraction = _post.LastInteraction;
 
         // Act & Assert
-        await Assert.ThrowsAsync<BadRequestException>(() => _handler.Handle(command, CancellationToken.None));
+        await Assert.ThrowsAsync<NotFoundException>(() => _handler.Handle(command, CancellationToken.None));
         
         PostRepositoryMock.Verify(x => x.GetEntityByIdAsync(_post.Id), Times.Once);
         CommentRepositoryMock.Verify(x => x.GetEntityByIdAsync(It.IsAny<Guid>()), Times.Never);
@@ -91,7 +91,7 @@ public class RemoveCommentFromPostHandlerTest : BasePostHandlerTest
     }
 
     [Fact]
-    public async Task Handle_WhenCommentDoesNotExist_ShouldThrowBadRequestException()
+    public async Task Handle_WhenCommentDoesNotExist_ShouldThrowNotFoundException()
     {
         // Arrange
         var commentId = Guid.NewGuid();
@@ -105,7 +105,7 @@ public class RemoveCommentFromPostHandlerTest : BasePostHandlerTest
         var previousLastInteraction = _post.LastInteraction;
 
         // Act & Assert
-        await Assert.ThrowsAsync<BadRequestException>(() => _handler.Handle(command, CancellationToken.None));
+        await Assert.ThrowsAsync<NotFoundException>(() => _handler.Handle(command, CancellationToken.None));
         
         PostRepositoryMock.Verify(x => x.GetEntityByIdAsync(_post.Id), Times.Once);
         CommentRepositoryMock.Verify(x => x.GetEntityByIdAsync(commentId), Times.Once);
