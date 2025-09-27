@@ -1,4 +1,6 @@
-﻿using Microsoft.AspNetCore.Http.Features;
+﻿using Asp.Versioning;
+using Microsoft.AspNetCore.Http.Features;
+using Microsoft.AspNetCore.Mvc;
 
 namespace API;
 
@@ -6,7 +8,22 @@ public static class DependencyInjection
 {
     public static IServiceCollection AddApi(this IServiceCollection services)
     {
-        services.AddControllers();
+        services.AddControllers()
+            .ConfigureApiBehaviorOptions(options =>
+                options.InvalidModelStateResponseFactory = context =>
+                {
+                    var problemDetails = new ProblemDetails
+                    {
+                        Type = "https://httpstatuses.com/422",
+                        Status = StatusCodes.Status422UnprocessableEntity,
+                        Title = "Invalid request.",
+                        Detail = "The request was unprocessable.",
+                        Instance = $"{context.HttpContext.Request.Method} {context.HttpContext.Request.Path}"
+                    };
+
+                    return new UnprocessableEntityObjectResult(problemDetails);
+                });
+        
         services.AddCors(options =>
         {
             options.AddDefaultPolicy(builder => 
@@ -16,9 +33,6 @@ public static class DependencyInjection
                     .AllowAnyHeader()
             );
         });
-        
-        services.AddOpenApi();
-        services.AddEndpointsApiExplorer();
         
         services.AddProblemDetails(options =>
         {
@@ -33,6 +47,21 @@ public static class DependencyInjection
                 context.ProblemDetails.Extensions.TryAdd("traceId", activity?.Id);
             };
         });
+
+        services.AddApiVersioning(options =>
+        {
+            options.DefaultApiVersion = new ApiVersion(1);
+            options.AssumeDefaultVersionWhenUnspecified = true;
+            options.ReportApiVersions = true;
+            options.ApiVersionReader = new UrlSegmentApiVersionReader();
+        }).AddApiExplorer(options =>
+        {
+            options.GroupNameFormat = "'v'VVV";
+            options.SubstituteApiVersionInUrl = true;
+        });
+        
+        services.AddOpenApi();
+        services.AddEndpointsApiExplorer();
         
         return services;
     }

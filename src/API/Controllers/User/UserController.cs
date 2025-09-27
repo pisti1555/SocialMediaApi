@@ -1,4 +1,5 @@
 ﻿using API.Controllers.Common;
+using API.DTOs.Bodies.Users;
 using API.DTOs.Params;
 using API.Extensions;
 using Application.Common.Pagination;
@@ -6,31 +7,44 @@ using Application.Requests.Users.Root.Commands.CreateUser;
 using Application.Requests.Users.Root.Queries.GetAllPaged;
 using Application.Requests.Users.Root.Queries.GetById;
 using Application.Responses;
+using Asp.Versioning;
 using Cortex.Mediator;
 using Microsoft.AspNetCore.Mvc;
 
 namespace API.Controllers.User;
 
-[Route("api/users")]
+[ApiVersion(1)]
+[Route("api/v{v:ApiVersion}/users")]
 public class UserController(IMediator mediator) : BaseApiController
 {
+    [MapToApiVersion(1)]
     [HttpPost]
-    public async Task<ActionResult<UserResponseDto>> Create([FromBody]CreateUserCommand command)
+    public async Task<ActionResult<UserResponseDto>> Create([FromBody]CreateUserDto dto, CancellationToken ct)
     {
-        var result = await mediator.SendCommandAsync<CreateUserCommand, UserResponseDto>(command);
+        var command = new CreateUserCommand(
+            dto.UserName ?? string.Empty, 
+            dto.Email ?? string.Empty, 
+            dto.FirstName ?? string.Empty, 
+            dto.LastName ?? string.Empty, 
+            dto.DateOfBirth ?? string.Empty
+        );
+        
+        var result = await mediator.SendCommandAsync<CreateUserCommand, UserResponseDto>(command, ct);
         return CreatedAtAction(nameof(GetById), new {id = result.Id}, result);
     }
     
+    [MapToApiVersion(1)]
     [HttpGet("{id}")]
-    public async Task<ActionResult<UserResponseDto>> GetById([FromRoute]string id)
+    public async Task<ActionResult<UserResponseDto>> GetById([FromRoute]string id, CancellationToken ct)
     {
         var query = new GetUserByIdQuery(id);
-        var result = await mediator.SendQueryAsync<GetUserByIdQuery, UserResponseDto>(query);
+        var result = await mediator.SendQueryAsync<GetUserByIdQuery, UserResponseDto>(query, ct);
         return Ok(result);
     }
     
+    [MapToApiVersion(1)]
     [HttpGet]
-    public async Task<ActionResult<PagedResult<UserResponseDto>>> GetAllPaged([FromQuery]PaginationParams pagination)
+    public async Task<ActionResult<PagedResult<UserResponseDto>>> GetAllPaged([FromQuery]PaginationParams pagination, CancellationToken ct)
     {
         var query = new GetAllUsersPagedQuery
         {
@@ -38,7 +52,7 @@ public class UserController(IMediator mediator) : BaseApiController
             PageSize = pagination.PageSize
         };
         
-        var result = await mediator.SendQueryAsync<GetAllUsersPagedQuery, PagedResult<UserResponseDto>>(query);
+        var result = await mediator.SendQueryAsync<GetAllUsersPagedQuery, PagedResult<UserResponseDto>>(query, ct);
         Response.AddPaginationHeaders(result);
         
         return Ok(result);

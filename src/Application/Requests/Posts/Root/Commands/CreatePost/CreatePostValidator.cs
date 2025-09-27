@@ -1,4 +1,5 @@
-﻿using FluentValidation;
+﻿using Application.Common.Extensions;
+using FluentValidation;
 
 namespace Application.Requests.Posts.Root.Commands.CreatePost;
 
@@ -7,11 +8,10 @@ public class CreatePostValidator : AbstractValidator<CreatePostCommand>
     public CreatePostValidator()
     {
         RuleFor(x => x.UserId)
-            .NotNull().WithMessage("UserId is required")
-            .NotEmpty().WithMessage("UserId is required");
+            .NotEmpty().WithMessage("UserId is required")
+            .MustBeParsableGuid();
         
         RuleFor(x => x.Text)
-            .NotNull().WithMessage("Text is required")
             .NotEmpty().WithMessage("Text is required")
             .MaximumLength(20000).WithMessage("Text is too long");
     }

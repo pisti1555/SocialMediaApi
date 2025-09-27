@@ -1,14 +1,12 @@
 ﻿using System.Data;
 using Application.Contracts.Persistence.Cortex.Mediator;
-using Application.Contracts.Persistence.Repositories.AppUser;
-using Application.Contracts.Persistence.Repositories.Post;
+using Application.Contracts.Persistence.Repositories;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Persistence.Cortex.Mediator;
 using Persistence.DataContext;
 using Persistence.Repositories;
-using Persistence.Repositories.Post;
 
 namespace Persistence;
 
@@ -26,11 +24,13 @@ public static class DependencyInjection
         );
 
         services.AddScoped<ICustomUnitOfWork, CustomUnitOfWork>();
+
+        services.AddScoped(typeof(IRepository<,>), typeof(Repository<,>));
         
-        services.AddScoped<IAppUserRepository, AppUserRepository>();
-        services.AddScoped<IPostRepository, PostRepository>();
-        services.AddScoped<IPostCommentRepository, PostCommentRepository>();
-        services.AddScoped<IPostLikeRepository, PostLikeRepository>();
+        //services.AddScoped<IAppUserRepository, AppUserRepository>();
+        //services.AddScoped<IPostRepository, PostRepository>();
+        //services.AddScoped<IPostCommentRepository, PostCommentRepository>();
+        //services.AddScoped<IPostLikeRepository, PostLikeRepository>();
         
         return services;
     }

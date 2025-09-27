@@ -1,6 +1,8 @@
-﻿using Application.Requests.Posts.PostLike.Commands.LikePost;
+﻿using System.Linq.Expressions;
+using Application.Requests.Posts.PostLike.Commands.LikePost;
 using Domain.Common.Exceptions.CustomExceptions;
 using Domain.Posts;
+using Domain.Users;
 using Moq;
 using UnitTests.Application.Posts.Common;
 using UnitTests.Extensions;
@@ -12,154 +14,151 @@ namespace UnitTests.Application.Posts.PostLike.Commands;
 public class LikePostHandlerTest : BasePostHandlerTest
 {
     private readonly LikePostHandler _handler;
+    
+    private readonly AppUser _user;
+    private readonly Post _post;
 
     public LikePostHandlerTest()
     {
         _handler = new LikePostHandler(
             PostRepositoryMock.Object,
             UserRepositoryMock.Object, 
+            LikeRepositoryMock.Object,
             CacheServiceMock.Object, 
             Mapper
         );
+        
+        _user = TestDataFactory.CreateUser();
+        _post = TestDataFactory.CreatePost(_user);
     }
     
-    private void VerifyLikeAdded(Post post, DateTime lastInteraction, bool success = true)
+    private void VerifyLikeAdded(DateTime lastInteraction, bool success = true)
     {
         if (!success)
         {
             LikeRepositoryMock.Verify(x => x.Add(It.IsAny<XPostLike>()), Times.Never);
-            PostRepositoryMock.Verify(x => x.Update(post), Times.Never);
-            PostRepositoryMock.Verify(x => x.SaveChangesAsync(), Times.Never);
-            CacheServiceMock.VerifyCacheRemove($"post-likes-{post.Id}", false);
-            Assert.Equal(lastInteraction, post.LastInteraction);
+            PostRepositoryMock.Verify(x => x.Update(_post), Times.Never);
+            PostRepositoryMock.Verify(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
+            CacheServiceMock.VerifyCacheRemove(It.IsAny<string>(), false);
+            Assert.Equal(lastInteraction, _post.LastInteraction);
             return;
         }
         
         LikeRepositoryMock.Verify(x => x.Add(It.IsAny<XPostLike>()), Times.Once);
-        PostRepositoryMock.Verify(x => x.Update(post), Times.Once);
-        PostRepositoryMock.Verify(x => x.SaveChangesAsync(), Times.Once);
-        CacheServiceMock.VerifyCacheRemove($"post-likes-{post.Id}");
-        Assert.NotEqual(lastInteraction, post.LastInteraction);
+        PostRepositoryMock.Verify(x => x.Update(_post), Times.Once);
+        PostRepositoryMock.Verify(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
+        CacheServiceMock.VerifyCacheRemove($"post-likes-{_post.Id}");
+        Assert.True(_post.LastInteraction > lastInteraction);
     }
 
     [Fact]
     public async Task Handle_WhenValidRequest_ShouldAddLikeAndUpdatePost()
     {
         // Arrange
-        var user = TestDataFactory.CreateUser();
-        var post = TestDataFactory.CreatePost(user);
-        var command = new LikePostCommand(user.Id.ToString(), post.Id.ToString());
+        var command = new LikePostCommand(_user.Id.ToString(), _post.Id.ToString());
         
-        PostRepositoryMock.SetupPost(post);
-        UserRepositoryMock.SetupUser(user);
-        LikeRepositoryMock.SetupLikeExists(post.Id, user.Id, false);
+        PostRepositoryMock.SetupPost(_post, Mapper);
+        UserRepositoryMock.SetupUser(_user, Mapper);
+        LikeRepositoryMock.SetupLikeExists(false);
         PostRepositoryMock.SetupSaveChanges();
         
-        var previousLastInteraction = post.LastInteraction;
+        var previousLastInteraction = _post.LastInteraction;
 
         // Act
         await _handler.Handle(command, CancellationToken.None);
 
         // Assert
-        CacheServiceMock.VerifyCacheRemove($"post-likes-{post.Id.ToString()}");
-        PostRepositoryMock.Verify(x => x.GetByIdAsync(post.Id), Times.Once);
-        UserRepositoryMock.Verify(x => x.GetByIdAsync(user.Id), Times.Once);
-        LikeRepositoryMock.Verify(x => x.ExistsAsync(post.Id, user.Id), Times.Once);
+        CacheServiceMock.VerifyCacheRemove($"post-likes-{_post.Id.ToString()}");
+        PostRepositoryMock.Verify(x => x.GetEntityByIdAsync(_post.Id), Times.Once);
+        UserRepositoryMock.Verify(x => x.GetEntityByIdAsync(_user.Id), Times.Once);
+        LikeRepositoryMock.Verify(x => x.ExistsAsync(It.IsAny<Expression<Func<XPostLike, bool>>>(), It.IsAny<CancellationToken>()), Times.Once);
         
-        VerifyLikeAdded(post, previousLastInteraction);
+        VerifyLikeAdded(previousLastInteraction);
     }
 
     [Fact]
-    public async Task Handle_WhenUserAlreadyLikedPost_ShouldThrowBadRequestException()
+    public async Task Handle_WhenUserAlreadyLikedPost_ShouldThrowConflictException()
     {
         // Arrange
-        var user = TestDataFactory.CreateUser();
-        var post = TestDataFactory.CreatePost(user);
-        var command = new LikePostCommand(user.Id.ToString(), post.Id.ToString());
+        var command = new LikePostCommand(_user.Id.ToString(), _post.Id.ToString());
         
-        PostRepositoryMock.SetupPost(post);
-        UserRepositoryMock.SetupUser(user);
-        LikeRepositoryMock.SetupLikeExists(post.Id, user.Id, true);
+        PostRepositoryMock.SetupPost(_post, Mapper);
+        UserRepositoryMock.SetupUser(_user, Mapper);
+        LikeRepositoryMock.SetupLikeExists(true);
         PostRepositoryMock.SetupSaveChanges();
         
-        var previousLastInteraction = post.LastInteraction;
+        var previousLastInteraction = _post.LastInteraction;
 
         // Act & Assert
-        await Assert.ThrowsAnyAsync<BadRequestException>(() => _handler.Handle(command, CancellationToken.None));
+        await Assert.ThrowsAnyAsync<ConflictException>(() => _handler.Handle(command, CancellationToken.None));
 
-        PostRepositoryMock.Verify(x => x.GetByIdAsync(post.Id), Times.Once);
-        UserRepositoryMock.Verify(x => x.GetByIdAsync(user.Id), Times.Once);
-        LikeRepositoryMock.Verify(x => x.ExistsAsync(post.Id, user.Id), Times.Once);
+        PostRepositoryMock.Verify(x => x.GetEntityByIdAsync(_post.Id), Times.Once);
+        UserRepositoryMock.Verify(x => x.GetEntityByIdAsync(_user.Id), Times.Once);
+        LikeRepositoryMock.Verify(x => x.ExistsAsync(It.IsAny<Expression<Func<XPostLike, bool>>>(), It.IsAny<CancellationToken>()), Times.Once);
         
-        VerifyLikeAdded(post, previousLastInteraction, false);
+        VerifyLikeAdded(previousLastInteraction, false);
     }
 
     [Fact]
-    public async Task Handle_WhenPostDoesNotExist_ShouldThrowBadRequestException()
+    public async Task Handle_WhenPostDoesNotExist_ShouldThrowNotFoundException()
     {
         // Arrange
-        var user = TestDataFactory.CreateUser();
-        var post = TestDataFactory.CreatePost(user);
-        var command = new LikePostCommand(user.Id.ToString(), post.Id.ToString());
+        var command = new LikePostCommand(_user.Id.ToString(), _post.Id.ToString());
         
-        PostRepositoryMock.SetupPost(null);
-        UserRepositoryMock.SetupUser(user);
+        PostRepositoryMock.SetupPost(null, Mapper);
+        UserRepositoryMock.SetupUser(_user, Mapper);
         
-        var previousLastInteraction = post.LastInteraction;
+        var previousLastInteraction = _post.LastInteraction;
 
         // Act & Assert
-        await Assert.ThrowsAnyAsync<BadRequestException>(() => _handler.Handle(command, CancellationToken.None));
+        await Assert.ThrowsAnyAsync<NotFoundException>(() => _handler.Handle(command, CancellationToken.None));
 
-        PostRepositoryMock.Verify(x => x.GetByIdAsync(post.Id), Times.Once);
-        LikeRepositoryMock.Verify(x => x.ExistsAsync(post.Id, user.Id), Times.Never);
+        PostRepositoryMock.Verify(x => x.GetEntityByIdAsync(_post.Id), Times.Once);
+        LikeRepositoryMock.Verify(x => x.ExistsAsync(It.IsAny<Expression<Func<XPostLike, bool>>>(), It.IsAny<CancellationToken>()), Times.Never);
         
-        VerifyLikeAdded(post, previousLastInteraction, false);
+        VerifyLikeAdded(previousLastInteraction, false);
     }
     
     [Fact]
     public async Task Handle_WhenUserDoesNotExist_ShouldThrowBadRequestException()
     {
         // Arrange
-        var user = TestDataFactory.CreateUser();
-        var post = TestDataFactory.CreatePost(user);
-        var command = new LikePostCommand(Guid.NewGuid().ToString(), post.Id.ToString());
+        var command = new LikePostCommand(Guid.NewGuid().ToString(), _post.Id.ToString());
 
-        PostRepositoryMock.SetupPost(post);
-        UserRepositoryMock.SetupUser(null);
+        PostRepositoryMock.SetupPost(_post, Mapper);
+        UserRepositoryMock.SetupUser(null, Mapper);
 
-        var previousLastInteraction = post.LastInteraction;
+        var previousLastInteraction = _post.LastInteraction;
 
         // Act & Assert
         await Assert.ThrowsAnyAsync<BadRequestException>(() => _handler.Handle(command, CancellationToken.None));
 
-        PostRepositoryMock.Verify(x => x.GetByIdAsync(post.Id), Times.Once);
-        UserRepositoryMock.Verify(x => x.GetByIdAsync(It.IsAny<Guid>()), Times.Once);
-        LikeRepositoryMock.Verify(x => x.ExistsAsync(post.Id, user.Id), Times.Never);
+        PostRepositoryMock.Verify(x => x.GetEntityByIdAsync(_post.Id), Times.Once);
+        UserRepositoryMock.Verify(x => x.GetEntityByIdAsync(It.IsAny<Guid>()), Times.Once);
+        LikeRepositoryMock.Verify(x => x.ExistsAsync(It.IsAny<Expression<Func<XPostLike, bool>>>(), It.IsAny<CancellationToken>()), Times.Never);
         
-        VerifyLikeAdded(post, previousLastInteraction, false);
+        VerifyLikeAdded(previousLastInteraction, false);
     }
 
     [Fact]
     public async Task Handle_WhenCannotSaveChanges_ShouldThrowBadRequestException()
     {
         // Arrange
-        var user = TestDataFactory.CreateUser();
-        var post = TestDataFactory.CreatePost(user);
-        var command = new LikePostCommand(user.Id.ToString(), post.Id.ToString());
+        var command = new LikePostCommand(_user.Id.ToString(), _post.Id.ToString());
         
-        PostRepositoryMock.SetupPost(post);
-        UserRepositoryMock.SetupUser(user);
-        LikeRepositoryMock.SetupLikeExists(post.Id, user.Id, false);
+        PostRepositoryMock.SetupPost(_post, Mapper);
+        UserRepositoryMock.SetupUser(_user, Mapper);
+        LikeRepositoryMock.SetupLikeExists(false);
         PostRepositoryMock.SetupSaveChanges(false);
 
         // Act & Assert
         await Assert.ThrowsAnyAsync<BadRequestException>(() => _handler.Handle(command, CancellationToken.None));
 
-        PostRepositoryMock.Verify(x => x.GetByIdAsync(post.Id), Times.Once);
-        LikeRepositoryMock.Verify(x => x.ExistsAsync(post.Id, user.Id), Times.Once);
-        LikeRepositoryMock.Verify(x => x.Add(It.IsAny<global::Domain.Posts.PostLike>()), Times.Once);
-        PostRepositoryMock.Verify(x => x.Update(post), Times.Once);
-        PostRepositoryMock.Verify(x => x.SaveChangesAsync(), Times.Once);
+        PostRepositoryMock.Verify(x => x.GetEntityByIdAsync(_post.Id), Times.Once);
+        LikeRepositoryMock.Verify(x => x.ExistsAsync(It.IsAny<Expression<Func<XPostLike, bool>>>(), It.IsAny<CancellationToken>()), Times.Once);
+        LikeRepositoryMock.Verify(x => x.Add(It.IsAny<XPostLike>()), Times.Once);
+        PostRepositoryMock.Verify(x => x.Update(_post), Times.Once);
+        PostRepositoryMock.Verify(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
         CacheServiceMock.VerifyCacheRemove(It.IsAny<string>(), false);
     }
 }

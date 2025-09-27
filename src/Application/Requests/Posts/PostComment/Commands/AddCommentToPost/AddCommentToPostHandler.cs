@@ -1,18 +1,21 @@
 ﻿using Application.Common.Helpers;
-using Application.Contracts.Persistence.Repositories.AppUser;
-using Application.Contracts.Persistence.Repositories.Post;
+using Application.Contracts.Persistence.Repositories;
 using Application.Contracts.Services;
 using Application.Responses;
 using AutoMapper;
 using Cortex.Mediator.Commands;
 using Domain.Common.Exceptions.CustomExceptions;
+using Domain.Posts;
 using Domain.Posts.Factories;
+using Domain.Users;
+using XComment = Domain.Posts.PostComment;
 
 namespace Application.Requests.Posts.PostComment.Commands.AddCommentToPost;
 
 public class AddCommentToPostHandler(
-    IPostRepository postRepository,
-    IAppUserRepository userRepository,
+    IRepository<AppUser, UserResponseDto> userRepository,
+    IRepository<Post, PostResponseDto> postRepository,
+    IRepository<XComment, PostCommentResponseDto> commentRepository,
     ICacheService cache,
     IMapper mapper
 ) : ICommandHandler<AddCommentToPostCommand, PostCommentResponseDto>
@@ -22,20 +25,20 @@ public class AddCommentToPostHandler(
         var userGuid = Parser.ParseIdOrThrow(request.UserId);
         var postGuid = Parser.ParseIdOrThrow(request.PostId);
         
-        var user = await userRepository.GetByIdAsync(userGuid);
+        var user = await userRepository.GetEntityByIdAsync(userGuid);
         if (user is null) throw new BadRequestException("User not found.");
         
-        var post = await postRepository.GetByIdAsync(postGuid);
-        if (post is null) throw new BadRequestException("Post not found.");
+        var post = await postRepository.GetEntityByIdAsync(postGuid);
+        if (post is null) throw new NotFoundException("Post not found.");
         
         var comment = PostCommentFactory.Create(request.Text, user, post);
         
         post.UpdateLastInteraction();
         
-        postRepository.CommentRepository.Add(comment);
+        commentRepository.Add(comment);
         postRepository.Update(post);
 
-        if (!await postRepository.SaveChangesAsync())
+        if (!await postRepository.SaveChangesAsync(cancellationToken))
             throw new BadRequestException("Comment could not be created.");
         
         await cache.RemoveAsync($"post-comments-{postGuid.ToString()}", cancellationToken);

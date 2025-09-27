@@ -13,7 +13,7 @@ namespace IntegrationTests.Controllers;
 
 public class PostLikeControllerTests(CustomWebApplicationFactoryFixture factory) : BaseControllerTest(factory), IAsyncLifetime
 {
-    private const string PostsBaseUrl = "/api/posts";
+    private const string PostsBaseUrl = "/api/v1/posts";
     private AppUser _user = null!;
     private Post _post = null!;
     
@@ -41,7 +41,7 @@ public class PostLikeControllerTests(CustomWebApplicationFactoryFixture factory)
     }
     
     [Fact]
-    public async Task GetLikesOfPost_ShouldCacheResult_ThenReturnFullList()
+    public async Task GetLikesOfPost_WhenLikesExist_ShouldCacheResult_ThenReturnFullList()
     {
         var like = await AddLikeToDbAsync(PostLikeDataFixture.GetPostLike(_user, _post));
         
@@ -76,7 +76,7 @@ public class PostLikeControllerTests(CustomWebApplicationFactoryFixture factory)
     }
 
     [Fact]
-    public async Task AddLike_ShouldAddLike_ThenReturnPostLikeDto()
+    public async Task AddLike_WhenValidRequest_ShouldAddLike_ThenReturnLike()
     {
         var response = await Client.PostAsync($"{PostsBaseUrl}/{_post.Id}/likes?userId={_user.Id.ToString()}", null);
         var result = await response.Content.ReadFromJsonAsync<PostLikeResponseDto>();
@@ -97,25 +97,40 @@ public class PostLikeControllerTests(CustomWebApplicationFactoryFixture factory)
     }
     
     [Fact]
-    public async Task AddLike_WhenPostNotFound_ShouldReturnBadRequest()
+    public async Task AddLike_WhenPostNotFound_ShouldReturnNotFound()
     {
-        var response = await Client.PostAsJsonAsync($"{PostsBaseUrl}/{Guid.NewGuid().ToString()}/likes", _user.Id.ToString());
-        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        var notExistingPostId = Guid.NewGuid().ToString();
+        
+        var response = await Client.PostAsync($"{PostsBaseUrl}/{notExistingPostId}/likes?userId={_user.Id.ToString()}", null);
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
     
     [Fact]
-    public async Task RemoveLike_ShouldReturnOk()
+    public async Task AddLike_WhenAlreadyLiked_ShouldReturnConflict()
     {
-        await AddLikeToDbAsync(PostLikeDataFixture.GetPostLike(_user, _post));
-        var response = await Client.DeleteAsync($"{PostsBaseUrl}/{_post.Id.ToString()}/likes?userId={_user.Id.ToString()}");
+        var like = await AddLikeToDbAsync(PostLikeDataFixture.GetPostLike(_user, _post));
+        
+        var response = await Client.PostAsync($"{PostsBaseUrl}/{_post.Id.ToString()}/likes?userId={_user.Id.ToString()}", null);
+        Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
+    }
+    
+    [Fact]
+    public async Task RemoveLike_WhenValidRequest_ShouldReturnOk()
+    {
+        var like = await AddLikeToDbAsync(PostLikeDataFixture.GetPostLike(_user, _post));
+        
+        var response = await Client.DeleteAsync($"{PostsBaseUrl}/{_post.Id.ToString()}/likes/{like.Id.ToString()}?userId={_user.Id.ToString()}");
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
     }
 
     [Fact]
-    public async Task RemoveLike_WhenPostNotFound_ShouldReturnBadRequest()
+    public async Task RemoveLike_WhenPostNotFound_ShouldReturnNotFound()
     {
-        var response = await Client.DeleteAsync($"{PostsBaseUrl}/{Guid.NewGuid().ToString()}/likes?userId={_user.Id.ToString()}");
-        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        var notExistingPostId = Guid.NewGuid().ToString();
+        var notExistingLikeId = Guid.NewGuid().ToString();
+        
+        var response = await Client.DeleteAsync($"{PostsBaseUrl}/{notExistingPostId}/likes/{notExistingLikeId}?userId={_user.Id.ToString()}");
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
     
     public async Task InitializeAsync()

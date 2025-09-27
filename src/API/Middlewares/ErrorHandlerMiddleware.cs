@@ -24,7 +24,7 @@ public class ErrorHandlerMiddleware(
         {
             var problemDetails = new ProblemDetails
             {
-                Type = env.IsDevelopment() ? e.GetType().Name : null,
+                Type = env.IsDevelopment() ? e.GetType().Name : $"https://httpstatuses.com/{e.StatusCode}",
                 Status = e.StatusCode,
                 Title = e.Title,
                 Detail = e.ErrorMessage,
@@ -36,6 +36,7 @@ public class ErrorHandlerMiddleware(
             logger.LogError(e, "Unhandled exception occurred");
             
             response.StatusCode = problemDetails.Status ?? StatusCodes.Status500InternalServerError;
+            
             await response.WriteAsJsonAsync(problemDetails);
         }
         catch (ValidationException e)
@@ -49,10 +50,10 @@ public class ErrorHandlerMiddleware(
             
             var validationProblemDetails = new ValidationProblemDetails
             {
-                Type = env.IsDevelopment() ? e.GetType().Name : null,
+                Type = env.IsDevelopment() ? e.GetType().Name : $"https://httpstatuses.com/{StatusCodes.Status400BadRequest}",
                 Status = StatusCodes.Status400BadRequest,
                 Title = "Validation failed",
-                Detail = e.Message,
+                Detail = "Some fields are invalid.",
                 Instance = $"{context.Request.Method} {context.Request.Path}",
                 Errors = errors
             };
@@ -60,13 +61,14 @@ public class ErrorHandlerMiddleware(
             AddProblemDetailsExtensions(validationProblemDetails, context);
             
             response.StatusCode = validationProblemDetails.Status ?? StatusCodes.Status400BadRequest;
+            
             await response.WriteAsJsonAsync(validationProblemDetails);
         }
         catch (Exception e)
         {
             var problemDetails = new ProblemDetails
             {
-                Type = env.IsDevelopment() ? e.GetType().Name : null,
+                Type = env.IsDevelopment() ? e.GetType().Name : $"https://httpstatuses.com/{StatusCodes.Status500InternalServerError}",
                 Status = StatusCodes.Status500InternalServerError,
                 Title = "Unexpected error occurred",
                 Detail = env.IsDevelopment()
@@ -80,6 +82,7 @@ public class ErrorHandlerMiddleware(
             logger.LogError(e, "Unhandled exception occurred");
             
             response.StatusCode = problemDetails.Status ?? StatusCodes.Status500InternalServerError;
+            
             await context.Response.WriteAsJsonAsync(problemDetails);
         }
     }

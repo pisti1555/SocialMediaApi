@@ -2,9 +2,11 @@ using API;
 using API.Middlewares;
 using Application;
 using Infrastructure;
+using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.EntityFrameworkCore;
 using Persistence;
 using Persistence.DataContext;
+using Scalar.AspNetCore;
 using Serilog;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -24,16 +26,27 @@ builder.Services.AddApi();
 
 
 var app = builder.Build();
+
+app.UseForwardedHeaders(new ForwardedHeadersOptions
+{
+    ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto
+});
+
+app.UseCors();
+
 app.UseStaticFiles();
 app.UseSerilogRequestLogging();
 app.UseMiddleware<ErrorHandlerMiddleware>();
-app.UseCors();
-app.MapControllers();
 
-if (app.Environment.IsDevelopment())
+app.MapControllers();
+app.MapOpenApi();
+app.MapScalarApiReference("/scalar", (options, context) =>
 {
-    app.MapOpenApi();
-}
+    options.Servers = [];
+    
+    options.Title = "Social Media API";
+    options.BaseServerUrl = $"{context.Request.Scheme}://{context.Request.Host.Value}";
+});
 
 // Migrate database
 using (var scope = app.Services.CreateScope())

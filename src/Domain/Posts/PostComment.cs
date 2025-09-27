@@ -1,4 +1,5 @@
 ﻿using Domain.Common;
+using Domain.Common.Exceptions.CustomExceptions;
 using Domain.Users;
 
 namespace Domain.Posts;
@@ -22,5 +23,16 @@ public class PostComment : EntityBase
         UserId = user.Id;
         Post = post;
         PostId = post.Id;
+    }
+    
+    public void UpdateText(string text, Post post)
+    {
+        if (text == Text) return;
+        
+        if (string.IsNullOrWhiteSpace(text)) throw new BadRequestException("Text cannot be empty.");
+        if (text.Length > 1000) throw new BadRequestException("Text is too long.");
+        
+        Text = text;
+        post.UpdateLastInteraction();
     }
 }

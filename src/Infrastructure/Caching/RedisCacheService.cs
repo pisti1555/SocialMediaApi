@@ -6,7 +6,7 @@ namespace Infrastructure.Caching;
 
 public sealed class RedisCacheService(IDistributedCache cache) : ICacheService
 {
-    private readonly TimeSpan _defaultCacheExpiry = TimeSpan.FromMinutes(5);
+    private readonly TimeSpan _defaultCacheExpiry = TimeSpan.FromMinutes(10);
     
     public async Task<T?> GetAsync<T>(string key, CancellationToken ct = default)
     {
