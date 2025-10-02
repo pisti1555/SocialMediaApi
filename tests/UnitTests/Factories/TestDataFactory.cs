@@ -8,7 +8,7 @@ namespace UnitTests.Factories;
 
 internal static class TestDataFactory
 {
-    private static Faker<AppUser> UserFaker(bool useNewSeed = false)
+    private static Faker<AppUser> UserFaker(bool useNewSeed = false, string? userName = null, string? email = null)
     {
         var seed = 10;
         if (useNewSeed)
@@ -19,8 +19,8 @@ internal static class TestDataFactory
         return new Faker<AppUser>()
             .CustomInstantiator(faker =>
                 AppUserFactory.Create(
-                    faker.Internet.UserName(),
-                    faker.Internet.Email(),
+                    userName ?? faker.Internet.UserName(),
+                    email ?? faker.Internet.Email(),
                     faker.Name.FirstName(),
                     faker.Name.LastName(),
                     faker.Date.BetweenDateOnly(
@@ -89,7 +89,7 @@ internal static class TestDataFactory
 
     // --- Factories ---
     // AppUser
-    internal static AppUser CreateUser(bool useNewSeed = false) => UserFaker(useNewSeed).Generate();
+    internal static AppUser CreateUser(bool useNewSeed = false, string? userName = null, string? email = null) => UserFaker(useNewSeed, userName, email).Generate();
 
     internal static List<AppUser> CreateUsers(int count, bool useNewSeed = false) => UserFaker(useNewSeed).Generate(count);
 

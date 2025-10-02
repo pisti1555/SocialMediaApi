@@ -1,10 +1,12 @@
 ﻿using API.Controllers.Common;
+using API.Extensions;
 using Application.Requests.Posts.PostLike.Commands.DislikePost;
 using Application.Requests.Posts.PostLike.Commands.LikePost;
 using Application.Requests.Posts.PostLike.Queries.GetLikesOfPost;
 using Application.Responses;
 using Asp.Versioning;
 using Cortex.Mediator;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace API.Controllers.Post;
@@ -23,12 +25,13 @@ public class PostLikeController(IMediator mediator) : BaseApiController
         return Ok(result);
     }
     
+    [Authorize]
     [MapToApiVersion(1)]
     [HttpPost]
-    public async Task<ActionResult<PostLikeResponseDto>> LikePost([FromRoute]string postId, [FromQuery]string? userId, CancellationToken ct)
+    public async Task<ActionResult<PostLikeResponseDto>> LikePost([FromRoute]string postId, CancellationToken ct)
     {
         var command = new LikePostCommand(
-            userId ?? string.Empty, 
+            User.GetUserId(),
             postId
         );
         
@@ -36,14 +39,15 @@ public class PostLikeController(IMediator mediator) : BaseApiController
         return Ok(result);
     }
     
+    [Authorize]
     [MapToApiVersion(1)]
     [HttpDelete("{likeId}")]
-    public async Task<ActionResult> DislikePost([FromRoute]string postId, [FromRoute]string likeId, [FromQuery]string? userId, CancellationToken ct)
+    public async Task<ActionResult> DislikePost([FromRoute]string postId, [FromRoute]string likeId, CancellationToken ct)
     {
         var command = new DislikePostCommand(
             postId, 
             likeId, 
-            userId ?? string.Empty
+            User.GetUserId()
         );
         
         await mediator.SendCommandAsync<DislikePostCommand, Unit>(command, ct);

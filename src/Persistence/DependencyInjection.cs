@@ -18,6 +18,10 @@ public static class DependencyInjection
         {
             opt.UseNpgsql(config.GetConnectionString("Database"));
         });
+        services.AddDbContext<AppIdentityDbContext>(opt =>
+        {
+            opt.UseNpgsql(config.GetConnectionString("IdentityDatabase"));
+        });
         
         services.AddScoped<IDbConnection>(sp => 
             sp.GetRequiredService<AppDbContext>().Database.GetDbConnection()
@@ -26,11 +30,6 @@ public static class DependencyInjection
         services.AddScoped<ICustomUnitOfWork, CustomUnitOfWork>();
 
         services.AddScoped(typeof(IRepository<,>), typeof(Repository<,>));
-        
-        //services.AddScoped<IAppUserRepository, AppUserRepository>();
-        //services.AddScoped<IPostRepository, PostRepository>();
-        //services.AddScoped<IPostCommentRepository, PostCommentRepository>();
-        //services.AddScoped<IPostLikeRepository, PostLikeRepository>();
         
         return services;
     }

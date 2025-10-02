@@ -1,21 +1,28 @@
+## Table of contents
+- [Overview](#overview)
+- [Services](#services)
+- [Features by routes](#features-by-routes)
+- [Usage](#usage)
+    - [API Documentation](#api-documentation)
+    - [Versioning](#versioning)
+    - [Pagination](#pagination)
+    - [Caching](#caching)
+
 ## Overview
 This is a demo project created for learning purposes, as it is my first .NET application.
 
 The API serves as the backend for a social media platform, which I plan to integrate into a website or mobile application.
 
-## Table of contents
-- [Overview](#overview)
-- [Features by routes](#features-by-routes)
-- [Services](#services)
-- [Usage](#usage)
-  - [API Documentation](#api-documentation)
-  - [Versioning](#versioning)
-  - [Pagination](#pagination)
-  - [Caching](#caching)
+## Services
+- .NET 9 as backend
+- PostgreSQL as database
+- Redis as cache
+- Nginx as proxy server
 
 ## Features by routes
 ### Users
-- Create
+- Register
+- Login
 - Get by ID
 - Get all (paged)
 
@@ -36,17 +43,16 @@ The API serves as the backend for a social media platform, which I plan to integ
 - Delete
 - Get comments of post (unpaged)
 
-## Services
-- .NET 9 as backend
-- PostgreSQL as database
-- Redis as cache
-
 ## Usage
 ### API Documentation
 All endpoints are documented and accessible via /scalar.
 
 ### Versioning
 The API is versioned. You must specify the version in the URL (example: /api/v1/users).
+
+### Authentication
+The API uses JWT authentication. Tokens are generated on login and must be passed in the Authorization header.
+The token is valid for 10 minutes. GET endpoints do not require authentication.
 
 ### Pagination
 When retrieving multiple objects (lists) of an entity root (eg. AppUser or Post), the API returns a paginated response.
@@ -66,6 +72,9 @@ Notes:
 ### Caching
 The API uses Redis as cache.
 
-The cached data sets on GET/POST, resets on PUT/PATCH, and invalidates on DELETE requests.
+The cached data:
+- sets on GET requests which produce single or unpaged results.
+- resets on PUT/PATCH requests.
+- invalidates on DELETE requests.
 
-The default cache time is 10 minutes.
+Default cache time is 10 minutes.

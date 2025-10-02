@@ -10,11 +10,11 @@ services:
       - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
       - ./nginx/certs:/etc/nginx/certs:ro
     depends_on:
-      - socialmedia-api
+      - api
     networks:
       - web
   
-  socialmedia-api:
+  api:
     image: ghcr.io/pisti1555/socialmedia-api:latest
     container_name: socialmedia-api
     build:
@@ -26,7 +26,8 @@ services:
       DOTNET_RUNNING_IN_CONTAINER: "true"
       ASPNETCORE_URLS: "http://+:8080"
     depends_on:
-      - socialmedia-db
+      - app-db
+      - identity-db
       - redis-cache
     expose:
       - 8080
@@ -34,13 +35,28 @@ services:
       - web
     restart: unless-stopped
 
-  socialmedia-db:
+  app-db:
     image: postgres:17.6
-    container_name: socialmedia-db
+    container_name: postgres-app-db
     volumes:
-      - db-data:/var/lib/postgresql/data
+      - app-db-data:/var/lib/postgresql/data
     environment:
       POSTGRES_DB: social_media
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    expose:
+      - 5432
+    networks:
+      - web
+    restart: unless-stopped
+    
+  identity-db:
+    image: postgres:17.6
+    container_name: postgres-identity-db
+    volumes:
+      - identity-db-data:/var/lib/postgresql/data
+    environment:
+      POSTGRES_DB: social_media_identity
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
     expose:
@@ -63,4 +79,5 @@ networks:
     driver: bridge
 
 volumes:
-  db-data:
+  app-db-data:
+  identity-db-data:

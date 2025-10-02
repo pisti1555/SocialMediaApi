@@ -7,17 +7,21 @@ using Cortex.Mediator.Commands;
 using Domain.Common.Exceptions.CustomExceptions;
 using Domain.Users;
 using Domain.Users.Factories;
+using FluentValidation;
+using FluentValidation.Results;
 
 namespace Application.Requests.Users.Root.Commands.CreateUser;
 
 public class CreateUserHandler(
     IRepository<AppUser, UserResponseDto> repository,
-    ICacheService cache,
+    ITokenService tokenService,
+    IAuthService authService,
     IMapper mapper
-) : ICommandHandler<CreateUserCommand, UserResponseDto>
+) : ICommandHandler<CreateUserCommand, AuthenticatedUserResponseDto>
 {
     private const int MinAge = 13;
-    public async Task<UserResponseDto> Handle(CreateUserCommand request, CancellationToken cancellationToken)
+    
+    public async Task<AuthenticatedUserResponseDto> Handle(CreateUserCommand request, CancellationToken cancellationToken)
     {
         await ThrowIfUserAlreadyExistsByUsername(request.UserName);
         await ThrowIfUserAlreadyExistsByEmail(request.Email);
@@ -28,17 +32,28 @@ public class CreateUserHandler(
         var user = AppUserFactory.Create(
             request.UserName, request.Email, request.FirstName, request.LastName, dob
         );
+
+        var result = await authService.CreateIdentityUserFromAppUserAsync(user, request.Password, cancellationToken);
+        if (!result.Succeeded)
+        {
+            throw new ValidationException(result.Errors.Select(x => new ValidationFailure("", x)));
+        }
         
         repository.Add(user);
-        
-        if (!await repository.SaveChangesAsync(cancellationToken))
-            throw new BadRequestException("User could not be created.");
-        
-        var userResponseDto = mapper.Map<UserResponseDto>(user);
-        
-        await cache.SetAsync($"user-{user.Id.ToString()}", userResponseDto, cancellationToken);
 
-        return userResponseDto;
+        if (!await repository.SaveChangesAsync(cancellationToken))
+        {
+            await authService.DeleteIdentityUserAsync(user);
+            throw new BadRequestException("User could not be created.");
+        }
+        
+        var roles = await authService.GetRolesAsync(user, cancellationToken);
+        var token = tokenService.CreateToken(user, roles);
+        
+        var authenticatedUserResponseDto = mapper.Map<AuthenticatedUserResponseDto>(user);
+        authenticatedUserResponseDto.Token = token;
+
+        return authenticatedUserResponseDto;
     }
 
     private async Task ThrowIfUserAlreadyExistsByUsername(string username)
@@ -54,7 +69,7 @@ public class CreateUserHandler(
             throw new BadRequestException("Email already exists.");
     }
 
-    private void ValidateDateOfBirth(DateOnly dateOfBirth)
+    private static void ValidateDateOfBirth(DateOnly dateOfBirth)
     {
         if (dateOfBirth == default)
             throw new BadRequestException("Date of birth is required.");

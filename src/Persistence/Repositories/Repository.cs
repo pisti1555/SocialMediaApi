@@ -41,10 +41,25 @@ public class Repository<TEntity, TDto>(AppDbContext context, IMapper mapper) : I
         return await context.Set<TEntity>().FindAsync(id);
     }
 
+    public async Task<TEntity?> GetEntityAsync(Expression<Func<TEntity, bool>> expression, CancellationToken ct = default)
+    {
+        return await context.Set<TEntity>()
+            .Where(expression)
+            .FirstOrDefaultAsync(ct);
+    }
+
     public async Task<TDto?> GetByIdAsync(Guid id, CancellationToken ct = default)
     {
         return await context.Set<TEntity>()
             .Where(x => x.Id == id)
+            .ProjectTo<TDto>(mapper.ConfigurationProvider)
+            .FirstOrDefaultAsync(ct);
+    }
+
+    public async Task<TDto?> GetAsync(Expression<Func<TEntity, bool>> expression, CancellationToken ct = default)
+    {
+        return await context.Set<TEntity>()
+            .Where(expression)
             .ProjectTo<TDto>(mapper.ConfigurationProvider)
             .FirstOrDefaultAsync(ct);
     }
