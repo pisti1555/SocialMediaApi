@@ -1,8 +1,10 @@
-﻿using Microsoft.AspNetCore.Hosting;
+﻿using Infrastructure.Auth.Configuration;
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Distributed;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Persistence.DataContext;
@@ -28,6 +30,10 @@ public class CustomWebApplicationFactoryFixture : WebApplicationFactory<Program>
     {
         builder.UseEnvironment("Test");
         
+        var config = new ConfigurationBuilder()
+            .AddJsonFile("appsettings.Test.json", optional: false, reloadOnChange: true)
+            .Build();
+        
         var postgresBaseConnection = _postgreSqlContainer.GetConnectionString();
         var redisConnectionString = _redisContainer.GetConnectionString();
         
@@ -35,6 +41,8 @@ public class CustomWebApplicationFactoryFixture : WebApplicationFactory<Program>
         
         builder.ConfigureTestServices(services =>
         {
+            services.Configure<JwtConfiguration>(config.GetSection("Jwt"));
+            
             // Reassign the connection string to the test database
             services.RemoveAll<DbContextOptions<AppDbContext>>();
             services.RemoveAll<DbContextOptions<AppIdentityDbContext>>();
