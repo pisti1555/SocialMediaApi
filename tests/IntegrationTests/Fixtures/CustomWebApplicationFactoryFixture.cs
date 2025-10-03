@@ -26,10 +26,13 @@ public class CustomWebApplicationFactoryFixture : WebApplicationFactory<Program>
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
+        builder.UseEnvironment("Test");
+        
         var postgresBaseConnection = _postgreSqlContainer.GetConnectionString();
         var redisConnectionString = _redisContainer.GetConnectionString();
         
         base.ConfigureWebHost(builder);
+        
         builder.ConfigureTestServices(services =>
         {
             // Reassign the connection string to the test database
