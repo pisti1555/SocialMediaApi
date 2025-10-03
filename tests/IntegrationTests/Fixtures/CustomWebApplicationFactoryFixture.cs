@@ -31,8 +31,9 @@ public class CustomWebApplicationFactoryFixture : WebApplicationFactory<Program>
         builder.UseEnvironment("Test");
         
         var config = new ConfigurationBuilder()
-            .SetBasePath(AppContext.BaseDirectory)
+            .SetBasePath(Directory.GetCurrentDirectory())
             .AddJsonFile("appsettings.Test.json", optional: false, reloadOnChange: true)
+            .AddEnvironmentVariables()
             .Build();
         
         var postgresBaseConnection = _postgreSqlContainer.GetConnectionString();
