@@ -7,34 +7,12 @@ on:
 
 jobs:
   # Build
-  build:
+  build-and-test:
     runs-on: ubuntu-latest
     
     env:
-      DOTNET_ENVIRONMENT: Development
-      ConnectionStrings__Database: "Host=postgres;Port=5432;Database=social_media;Username=postgres;Password=postgres"
-      ConnectionStrings__Redis: "Host=redis;Port=6379"
+      DOTNET_ENVIRONMENT: Test
 
-    services:
-      postgres:
-        image: postgres:17.6
-        env:
-          POSTGRES_DB: social_media
-          POSTGRES_USER: postgres
-          POSTGRES_PASSWORD: postgres
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-      redis:
-        image: redis:8.2.1
-        ports:
-          - 6379:6379
-        options: --health-cmd "redis-cli ping" --health-interval 10s --health-timeout 5s --health-retries 5
-        
     steps:
       - name: Checkout
         uses: actions/checkout@v4
