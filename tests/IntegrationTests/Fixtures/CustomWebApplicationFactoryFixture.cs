@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Distributed;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Persistence.DataContext;
@@ -26,10 +27,18 @@ public class CustomWebApplicationFactoryFixture : WebApplicationFactory<Program>
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
+        var integrationConfig = new ConfigurationBuilder()
+            .SetBasePath(Directory.GetCurrentDirectory())
+            .AddJsonFile("integrationtestsettings.json", optional: false, reloadOnChange: true)
+            .Build();
+        
+        builder.UseConfiguration(integrationConfig);
+        
         var postgresBaseConnection = _postgreSqlContainer.GetConnectionString();
         var redisConnectionString = _redisContainer.GetConnectionString();
         
         base.ConfigureWebHost(builder);
+        
         builder.ConfigureTestServices(services =>
         {
             // Reassign the connection string to the test database
@@ -50,7 +59,7 @@ public class CustomWebApplicationFactoryFixture : WebApplicationFactory<Program>
             services.AddStackExchangeRedisCache(options =>
             {
                 options.Configuration = redisConnectionString;
-                options.InstanceName = "SocialMediaApi";
+                options.InstanceName = "TestCache";
             });
         });
     }

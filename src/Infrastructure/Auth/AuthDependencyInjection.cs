@@ -1,6 +1,7 @@
 ﻿using System.Text;
 using Application.Contracts.Services;
 using Infrastructure.Auth.Configuration;
+using Infrastructure.Auth.Exceptions;
 using Infrastructure.Auth.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
@@ -45,9 +46,9 @@ internal static class AuthDependencyInjection
         services.AddScoped<IAuthService, IdentityService>();
         
         // Read JWT options
-        var jwtOptions = config.GetSection("Jwt").Get<JwtConfiguration>();
-        if (jwtOptions is null)
-            throw new InvalidOperationException("JWT configuration is missing.");
+        var jwtConfiguration = config.GetSection("Jwt").Get<JwtConfiguration>();
+        if (jwtConfiguration is null)
+            throw new JwtException("JWT configuration is missing.");
         
         // Add authentication
         services
@@ -60,9 +61,9 @@ internal static class AuthDependencyInjection
             {
                 options.TokenValidationParameters = new TokenValidationParameters
                 {
-                    ValidIssuer = jwtOptions.Issuer,
-                    ValidAudience = jwtOptions.Audience,
-                    IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtOptions.SecretKey)),
+                    ValidIssuer = jwtConfiguration.Issuer,
+                    ValidAudience = jwtConfiguration.Audience,
+                    IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtConfiguration.SecretKey)),
 
                     ValidateIssuer = true,
                     ValidateAudience = true,

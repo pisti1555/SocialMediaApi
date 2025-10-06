@@ -18,6 +18,7 @@ jobs:
     env:
       DOTNET_ENVIRONMENT: Development
       ConnectionStrings__Database: "Host=postgres;Port=5432;Database=social_media;Username=postgres;Password=postgres"
+      ConnectionStrings__IdentityDatabase: "Host=postgres;Port=5432;Database=social_media_identity;Username=postgres;Password=postgres"
       ConnectionStrings__Redis: "Host=redis;Port=6379"
 
     services:

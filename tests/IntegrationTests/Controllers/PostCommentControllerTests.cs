@@ -9,10 +9,11 @@ using IntegrationTests.Fixtures;
 using IntegrationTests.Fixtures.DataFixtures;
 using Microsoft.EntityFrameworkCore;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace IntegrationTests.Controllers;
 
-public class PostCommentControllerTests(CustomWebApplicationFactoryFixture factory) : BaseControllerTest(factory), IAsyncLifetime
+public class PostCommentControllerTests(CustomWebApplicationFactoryFixture factory, ITestOutputHelper output) : BaseControllerTest(factory), IAsyncLifetime
 {
     private const string PostsBaseUrl = "/api/v1/posts";
     private AppUser _user = null!;

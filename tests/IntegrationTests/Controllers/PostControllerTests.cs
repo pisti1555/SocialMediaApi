@@ -10,10 +10,11 @@ using IntegrationTests.Fixtures;
 using IntegrationTests.Fixtures.DataFixtures;
 using Microsoft.EntityFrameworkCore;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace IntegrationTests.Controllers;
 
-public class PostControllerTests(CustomWebApplicationFactoryFixture factory) : BaseControllerTest(factory), IAsyncLifetime
+public class PostControllerTests(CustomWebApplicationFactoryFixture factory, ITestOutputHelper output) : BaseControllerTest(factory), IAsyncLifetime
 {
     private const string BaseUrl = "/api/v1/posts";
     private AppUser _user = null!;
@@ -141,7 +142,6 @@ public class PostControllerTests(CustomWebApplicationFactoryFixture factory) : B
     {
         var authenticatedClient = await GetAuthenticatedClientAsync(_user);
         var post = await AddPostToDbAsync(PostDataFixture.GetPost(_user));
-        
         var response = await authenticatedClient.DeleteAsync($"{BaseUrl}/{post.Id}");
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
     }

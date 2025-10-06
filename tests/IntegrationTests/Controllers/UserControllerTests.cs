@@ -65,9 +65,6 @@ public class UserControllerTests(CustomWebApplicationFactoryFixture factory, ITe
         
         // Act
         var response = await Client.PostAsJsonAsync($"{BaseUrl}/login", command);
-        output.WriteLine("Response: ");
-        output.WriteLine(await response.Content.ReadAsStringAsync());
-        
         var result = await response.Content.ReadFromJsonAsync<AuthenticatedUserResponseDto>();
         
         // Assert response is ok and contains user data
@@ -101,9 +98,6 @@ public class UserControllerTests(CustomWebApplicationFactoryFixture factory, ITe
         
         // Act
         var response = await Client.PostAsJsonAsync($"{BaseUrl}/login", command);
-        output.WriteLine("Response: ");
-        output.WriteLine(await response.Content.ReadAsStringAsync());
-        
         var result = await response.Content.ReadFromJsonAsync<ProblemDetails>();
         
         // Assert response is unauthorized
@@ -127,8 +121,6 @@ public class UserControllerTests(CustomWebApplicationFactoryFixture factory, ITe
         
         // Act
         var response = await Client.PostAsJsonAsync($"{BaseUrl}/register", command);
-        output.WriteLine("Response: ");
-        output.WriteLine(await response.Content.ReadAsStringAsync());
         var result = await response.Content.ReadFromJsonAsync<AuthenticatedUserResponseDto>();
         
         // Assert response is created and contains location header and user data

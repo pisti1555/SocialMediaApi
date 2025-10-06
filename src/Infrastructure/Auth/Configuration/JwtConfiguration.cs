@@ -2,8 +2,8 @@
 
 public sealed class JwtConfiguration
 {
-    public required string SecretKey { get; init; }
-    public required int ExpirationMinutes { get; init; }
-    public required string Issuer { get; init; }
-    public required string Audience { get; init; }
+    public required string SecretKey { get; set; }
+    public required int ExpirationMinutes { get; set; }
+    public required string Issuer { get; set; }
+    public required string Audience { get; set; }
 }
