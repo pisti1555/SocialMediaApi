@@ -11,7 +11,7 @@ jobs:
     runs-on: ubuntu-latest
     
     env:
-      DOTNET_ENVIRONMENT: Test
+      DOTNET_ENVIRONMENT: Development
       
     steps:
       - name: Checkout

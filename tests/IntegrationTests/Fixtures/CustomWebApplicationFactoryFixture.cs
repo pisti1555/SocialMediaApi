@@ -1,5 +1,4 @@
-﻿using Infrastructure.Auth.Configuration;
-using Microsoft.AspNetCore.Hosting;
+﻿using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.EntityFrameworkCore;
@@ -28,13 +27,12 @@ public class CustomWebApplicationFactoryFixture : WebApplicationFactory<Program>
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
-        builder.UseEnvironment("Test");
-        
-        var config = new ConfigurationBuilder()
+        var integrationConfig = new ConfigurationBuilder()
             .SetBasePath(Directory.GetCurrentDirectory())
-            .AddJsonFile("appsettings.Test.json", optional: false, reloadOnChange: true)
-            .AddEnvironmentVariables()
+            .AddJsonFile("integrationtestsettings.json", optional: false, reloadOnChange: true)
             .Build();
+        
+        builder.UseConfiguration(integrationConfig);
         
         var postgresBaseConnection = _postgreSqlContainer.GetConnectionString();
         var redisConnectionString = _redisContainer.GetConnectionString();
@@ -43,8 +41,6 @@ public class CustomWebApplicationFactoryFixture : WebApplicationFactory<Program>
         
         builder.ConfigureTestServices(services =>
         {
-            services.Configure<JwtConfiguration>(config.GetSection("Jwt"));
-            
             // Reassign the connection string to the test database
             services.RemoveAll<DbContextOptions<AppDbContext>>();
             services.RemoveAll<DbContextOptions<AppIdentityDbContext>>();

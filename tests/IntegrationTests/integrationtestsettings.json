@@ -1,0 +1,8 @@
+﻿{
+  "Jwt": {
+    "SecretKey": "this_is_a_test_jwt_secret_key_which_must_be_64_characters_long_but_i_think_it_is_ok_now",
+    "ExpirationMinutes": 10,
+    "Issuer": "TestIssuer",
+    "Audience": "TestAudience"
+  }
+}
