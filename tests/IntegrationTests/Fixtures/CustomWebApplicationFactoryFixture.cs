@@ -59,7 +59,7 @@ public class CustomWebApplicationFactoryFixture : WebApplicationFactory<Program>
             services.AddStackExchangeRedisCache(options =>
             {
                 options.Configuration = redisConnectionString;
-                options.InstanceName = "SocialMediaApi";
+                options.InstanceName = "TestCache";
             });
         });
     }
