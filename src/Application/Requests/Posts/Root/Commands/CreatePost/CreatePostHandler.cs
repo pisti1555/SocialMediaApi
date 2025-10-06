@@ -1,6 +1,5 @@
 ﻿using Application.Common.Helpers;
 using Application.Contracts.Persistence.Repositories;
-using Application.Contracts.Services;
 using Application.Responses;
 using AutoMapper;
 using Cortex.Mediator.Commands;
@@ -14,7 +13,6 @@ namespace Application.Requests.Posts.Root.Commands.CreatePost;
 public class CreatePostHandler(
     IRepository<Post, PostResponseDto> postRepository,
     IRepository<AppUser, UserResponseDto> userRepository,
-    ICacheService cache,
     IMapper mapper
 ) : ICommandHandler<CreatePostCommand, PostResponseDto>
 {
@@ -32,8 +30,6 @@ public class CreatePostHandler(
             throw new BadRequestException("Post could not be created.");
         
         var postResponseDto = mapper.Map<PostResponseDto>(post);
-        
-        await cache.SetAsync($"post-{post.Id.ToString()}", postResponseDto, cancellationToken);
         
         return postResponseDto;
     }

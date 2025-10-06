@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Distributed;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Persistence.DataContext;
@@ -14,9 +15,8 @@ namespace IntegrationTests.Fixtures;
 
 public class CustomWebApplicationFactoryFixture : WebApplicationFactory<Program>, IAsyncLifetime
 {
-    private readonly PostgreSqlContainer _postgresSqlContainer = new PostgreSqlBuilder()
+    private readonly PostgreSqlContainer _postgreSqlContainer = new PostgreSqlBuilder()
         .WithImage("postgres:17.6")
-        .WithDatabase("social_media")
         .WithUsername("postgres")
         .WithPassword("postgres")
         .Build();
@@ -27,17 +27,31 @@ public class CustomWebApplicationFactoryFixture : WebApplicationFactory<Program>
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
-        var postgresConnectionString = _postgresSqlContainer.GetConnectionString();
+        var integrationConfig = new ConfigurationBuilder()
+            .SetBasePath(Directory.GetCurrentDirectory())
+            .AddJsonFile("integrationtestsettings.json", optional: false, reloadOnChange: true)
+            .Build();
+        
+        builder.UseConfiguration(integrationConfig);
+        
+        var postgresBaseConnection = _postgreSqlContainer.GetConnectionString();
         var redisConnectionString = _redisContainer.GetConnectionString();
         
         base.ConfigureWebHost(builder);
+        
         builder.ConfigureTestServices(services =>
         {
             // Reassign the connection string to the test database
             services.RemoveAll<DbContextOptions<AppDbContext>>();
+            services.RemoveAll<DbContextOptions<AppIdentityDbContext>>();
+            
             services.AddDbContext<AppDbContext>(options =>
             {
-                options.UseNpgsql(postgresConnectionString);
+                options.UseNpgsql($"{postgresBaseConnection};Database=social_media;");
+            });
+            services.AddDbContext<AppIdentityDbContext>(options =>
+            {
+                options.UseNpgsql($"{postgresBaseConnection};Database=social_media_identity;");
             });
             
             // Reassign the connection string to redis cache
@@ -45,25 +59,29 @@ public class CustomWebApplicationFactoryFixture : WebApplicationFactory<Program>
             services.AddStackExchangeRedisCache(options =>
             {
                 options.Configuration = redisConnectionString;
-                options.InstanceName = "SocialMediaApi";
+                options.InstanceName = "TestCache";
             });
         });
     }
 
     public async Task InitializeAsync()
     {
-        await _postgresSqlContainer.StartAsync();
+        await _postgreSqlContainer.StartAsync();
         await _redisContainer.StartAsync();
         
         using var scope = Services.CreateScope();
         var scopedServices = scope.ServiceProvider;
+        
         var ctx = scopedServices.GetRequiredService<AppDbContext>();
+        var identityCtx = scopedServices.GetRequiredService<AppIdentityDbContext>();
+        
         await ctx.Database.EnsureCreatedAsync();
+        await identityCtx.Database.EnsureCreatedAsync();
     }
 
     public new async Task DisposeAsync()
     {
-        await _postgresSqlContainer.StopAsync();
+        await _postgreSqlContainer.StopAsync();
         await _redisContainer.StopAsync();
     }
 }

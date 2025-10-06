@@ -26,7 +26,7 @@ internal static class AppUserDataFixture
         return new Faker<AppUser>()
             .CustomInstantiator(faker =>
                 AppUserFactory.Create(
-                    faker.Internet.UserName(),
+                    faker.Random.AlphaNumeric(faker.Random.Int(6, 18)).ToLower(),
                     faker.Internet.Email(),
                     faker.Name.FirstName(),
                     faker.Name.LastName(),

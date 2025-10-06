@@ -11,6 +11,7 @@ using Application.Requests.Posts.Root.Queries.GetById;
 using Application.Responses;
 using Asp.Versioning;
 using Cortex.Mediator;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace API.Controllers.Post;
@@ -19,26 +20,28 @@ namespace API.Controllers.Post;
 [Route("api/v{v:ApiVersion}/posts")]
 public class PostController(IMediator mediator) : BaseApiController
 {
+    [Authorize]
     [MapToApiVersion(1)]
     [HttpPost]
     public async Task<ActionResult<PostResponseDto>> Create([FromBody]CreatePostDto dto, CancellationToken ct)
     {
         var command = new CreatePostCommand(
             dto.Text ?? string.Empty, 
-            dto.UserId ?? string.Empty
+            User.GetUserId()
         );
         
         var result = await mediator.SendCommandAsync<CreatePostCommand, PostResponseDto>(command, ct);
         return CreatedAtAction(nameof(GetById), new {id = result.Id}, result);
     }
 
+    [Authorize]
     [MapToApiVersion(1)]
     [HttpPatch("{id}")]
     public async Task<ActionResult<PostResponseDto>> Update([FromRoute]string id, [FromBody]UpdatePostDto dto, CancellationToken ct)
     {
         var command = new UpdatePostCommand(
             id, 
-            dto.UserId ?? string.Empty, 
+            User.GetUserId(),
             dto.Text ?? string.Empty
         );
         
@@ -46,11 +49,12 @@ public class PostController(IMediator mediator) : BaseApiController
         return Ok(result);
     }
     
+    [Authorize]
     [MapToApiVersion(1)]
     [HttpDelete("{id}")]
-    public async Task<ActionResult> Delete([FromRoute]string id, [FromQuery]string? userId, CancellationToken ct)
+    public async Task<ActionResult> Delete([FromRoute]string id, CancellationToken ct)
     {
-        var command = new DeletePostCommand(id, userId ?? string.Empty);
+        var command = new DeletePostCommand(id, User.GetUserId());
         await mediator.SendCommandAsync<DeletePostCommand, Unit>(command, ct);
         return Ok();
     }

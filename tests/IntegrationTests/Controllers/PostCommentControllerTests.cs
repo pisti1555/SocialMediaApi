@@ -9,10 +9,11 @@ using IntegrationTests.Fixtures;
 using IntegrationTests.Fixtures.DataFixtures;
 using Microsoft.EntityFrameworkCore;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace IntegrationTests.Controllers;
 
-public class PostCommentControllerTests(CustomWebApplicationFactoryFixture factory) : BaseControllerTest(factory), IAsyncLifetime
+public class PostCommentControllerTests(CustomWebApplicationFactoryFixture factory, ITestOutputHelper output) : BaseControllerTest(factory), IAsyncLifetime
 {
     private const string PostsBaseUrl = "/api/v1/posts";
     private AppUser _user = null!;
@@ -78,9 +79,10 @@ public class PostCommentControllerTests(CustomWebApplicationFactoryFixture facto
     [Fact]
     public async Task AddComment_WenValidRequest_ShouldSaveCommentToDatabase_ThenReturnPost()
     {
-        var dto = new AddCommentToPostDto(_user.Id.ToString(), "Test text");
+        var authenticatedClient = await GetAuthenticatedClientAsync(_user);
+        var dto = new AddCommentToPostDto("Test text");
         
-        var response = await Client.PostAsJsonAsync($"{PostsBaseUrl}/{_post.Id}/comments", dto);
+        var response = await authenticatedClient.PostAsJsonAsync($"{PostsBaseUrl}/{_post.Id}/comments", dto);
         var result = await response.Content.ReadFromJsonAsync<PostCommentResponseDto>();
         
         var commentInDb = await DbContext.PostComments
@@ -100,20 +102,22 @@ public class PostCommentControllerTests(CustomWebApplicationFactoryFixture facto
     [Fact]
     public async Task AddComment_WhenPostNotFound_ShouldReturnNotFound()
     {
+        var authenticatedClient = await GetAuthenticatedClientAsync(_user);
         var notExistingPostId = Guid.NewGuid().ToString();
-        var addCommentDto = new AddCommentToPostDto(_user.Id.ToString(), "Test text");
+        var addCommentDto = new AddCommentToPostDto("Test text");
         
-        var response = await Client.PostAsJsonAsync($"{PostsBaseUrl}/{notExistingPostId}/comments", addCommentDto);
+        var response = await authenticatedClient.PostAsJsonAsync($"{PostsBaseUrl}/{notExistingPostId}/comments", addCommentDto);
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
     
     [Fact]
     public async Task UpdateComment_WhenValidRequest_ShouldUpdateComment_ThenReturnComment()
     {
+        var authenticatedClient = await GetAuthenticatedClientAsync(_user);
         var comment = await AddCommentToDbAsync(PostCommentDataFixture.GetPostComment(_user, _post));
-        var dto = new UpdateCommentOfPostDto(_user.Id.ToString(), "Updated text");
+        var dto = new UpdateCommentOfPostDto("Updated text");
         
-        var response = await Client.PatchAsJsonAsync($"{PostsBaseUrl}/{_post.Id}/comments/{comment.Id}", dto);
+        var response = await authenticatedClient.PatchAsJsonAsync($"{PostsBaseUrl}/{_post.Id}/comments/{comment.Id}", dto);
         var result = await response.Content.ReadFromJsonAsync<PostCommentResponseDto>();
         
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
@@ -123,60 +127,68 @@ public class PostCommentControllerTests(CustomWebApplicationFactoryFixture facto
     [Fact]
     public async Task UpdateComment_WhenPostNotFound_ShouldReturnNotFound()
     {
+        var authenticatedClient = await GetAuthenticatedClientAsync(_user);
         var notExistingPostId = Guid.NewGuid().ToString();
         var commentId = PostCommentDataFixture.GetPostComment(_user, _post).Id.ToString();
-        var updateCommentDto = new UpdateCommentOfPostDto(_user.Id.ToString(), "Updated text");
+        var updateCommentDto = new UpdateCommentOfPostDto("Updated text");
         
-        var response = await Client.PatchAsJsonAsync($"{PostsBaseUrl}/{notExistingPostId}/comments/{commentId}", updateCommentDto);
+        var response = await authenticatedClient.PatchAsJsonAsync($"{PostsBaseUrl}/{notExistingPostId}/comments/{commentId}", updateCommentDto);
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
     
     [Fact]
     public async Task UpdateComment_WhenCommentNotFound_ShouldReturnNotFound()
     {
+        var authenticatedClient = await GetAuthenticatedClientAsync(_user);
         var notExistingCommentId = Guid.NewGuid().ToString();
-        var updateCommentDto = new UpdateCommentOfPostDto(_user.Id.ToString(), "Updated text");
+        var updateCommentDto = new UpdateCommentOfPostDto("Updated text");
         
-        var response = await Client.PatchAsJsonAsync($"{PostsBaseUrl}/{_post.Id.ToString()}/comments/{notExistingCommentId}", updateCommentDto);
+        var response = await authenticatedClient.PatchAsJsonAsync($"{PostsBaseUrl}/{_post.Id.ToString()}/comments/{notExistingCommentId}", updateCommentDto);
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
     
     [Fact]
     public async Task RemoveComment_WhenValidRequest_ShouldReturnOk()
     {
+        var authenticatedClient = await GetAuthenticatedClientAsync(_user);
         await AddCommentToDbAsync(PostCommentDataFixture.GetPostComment(_user, _post));
         
         var comment = await DbContext.PostComments
             .Where(x => x.PostId == _post.Id)
             .FirstAsync();
         
-        var response = await Client.DeleteAsync($"{PostsBaseUrl}/{_post.Id.ToString()}/comments/{comment.Id.ToString()}?userId={_user.Id.ToString()}");
+        var response = await authenticatedClient.DeleteAsync($"{PostsBaseUrl}/{_post.Id.ToString()}/comments/{comment.Id.ToString()}");
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
     }
 
     [Fact]
     public async Task RemoveComment_WhenPostNotFound_ShouldReturnNotFound()
     {
+        var authenticatedClient = await GetAuthenticatedClientAsync(_user);
         var notExistingPostId = Guid.NewGuid().ToString();
         var notExistingCommentId = Guid.NewGuid().ToString();
         
-        var response = await Client.DeleteAsync($"{PostsBaseUrl}/{notExistingPostId}/comments/{notExistingCommentId}?userId={_user.Id.ToString()}");
+        var response = await authenticatedClient.DeleteAsync($"{PostsBaseUrl}/{notExistingPostId}/comments/{notExistingCommentId}");
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
     
     [Fact]
     public async Task RemoveComment_WhenCommentNotFound_ShouldReturnNotFound()
     {
+        var authenticatedClient = await GetAuthenticatedClientAsync(_user);
         var notExistingCommentId = Guid.NewGuid().ToString();
         
-        var response = await Client.DeleteAsync($"{PostsBaseUrl}/{_post.Id.ToString()}/comments/{notExistingCommentId}?userId={_user.Id.ToString()}");
+        var response = await authenticatedClient.DeleteAsync($"{PostsBaseUrl}/{_post.Id.ToString()}/comments/{notExistingCommentId}");
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
     
     public async Task InitializeAsync()
     {
         await DbContext.Database.EnsureDeletedAsync();
+        await IdentityDbContext.Database.EnsureDeletedAsync();
+        
         await DbContext.Database.EnsureCreatedAsync();
+        await IdentityDbContext.Database.EnsureCreatedAsync();
         
         _user = AppUserDataFixture.GetUser();
         _post = PostDataFixture.GetPost(_user);
@@ -192,5 +204,6 @@ public class PostCommentControllerTests(CustomWebApplicationFactoryFixture facto
     public async Task DisposeAsync()
     {
         await DbContext.Database.EnsureDeletedAsync();
+        await IdentityDbContext.Database.EnsureDeletedAsync();
     }
 }

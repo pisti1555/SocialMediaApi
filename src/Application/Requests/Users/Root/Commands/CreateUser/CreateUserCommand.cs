@@ -5,5 +5,10 @@ namespace Application.Requests.Users.Root.Commands.CreateUser;
 
 public record CreateUserCommand
 (
-    string UserName, string Email, string FirstName, string LastName, string DateOfBirth
-) : ICommand<UserResponseDto>;
+    string UserName, 
+    string Email, 
+    string Password,
+    string FirstName, 
+    string LastName, 
+    string DateOfBirth
+) : ICommand<AuthenticatedUserResponseDto>;

@@ -2,7 +2,7 @@
 using Microsoft.Extensions.Caching.Distributed;
 using Newtonsoft.Json;
 
-namespace Infrastructure.Caching;
+namespace Infrastructure.Caching.Services;
 
 public sealed class RedisCacheService(IDistributedCache cache) : ICacheService
 {

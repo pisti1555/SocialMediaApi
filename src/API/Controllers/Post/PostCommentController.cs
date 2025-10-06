@@ -1,5 +1,6 @@
 ﻿using API.Controllers.Common;
 using API.DTOs.Bodies.Posts.Comments;
+using API.Extensions;
 using Application.Requests.Posts.PostComment.Commands.AddCommentToPost;
 using Application.Requests.Posts.PostComment.Commands.RemoveCommentFromPost;
 using Application.Requests.Posts.PostComment.Commands.UpdateCommentOfPost;
@@ -7,6 +8,7 @@ using Application.Requests.Posts.PostComment.Queries.GetCommentsOfPost;
 using Application.Responses;
 using Asp.Versioning;
 using Cortex.Mediator;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace API.Controllers.Post;
@@ -24,13 +26,14 @@ public class PostCommentController(IMediator mediator) : BaseApiController
         return Ok(result);
     }
     
+    [Authorize]
     [MapToApiVersion(1)]
     [HttpPost]
     public async Task<ActionResult<PostCommentResponseDto>> AddComment([FromRoute]string postId, [FromBody]AddCommentToPostDto dto, CancellationToken ct)
     {
         var command = new AddCommentToPostCommand(
             postId, 
-            dto.UserId ?? string.Empty, 
+            User.GetUserId(),
             dto.Text ?? string.Empty
         );
         
@@ -38,6 +41,7 @@ public class PostCommentController(IMediator mediator) : BaseApiController
         return Ok(result);
     }
     
+    [Authorize]
     [MapToApiVersion(1)]
     [HttpPatch("{commentId}")]
     public async Task<ActionResult<PostCommentResponseDto>> UpdateComment([FromRoute]string postId, [FromRoute]string commentId, [FromBody]UpdateCommentOfPostDto dto, CancellationToken ct)
@@ -45,7 +49,7 @@ public class PostCommentController(IMediator mediator) : BaseApiController
         var command = new UpdateCommentOfPostCommand(
             postId, 
             commentId, 
-            dto.UserId ?? string.Empty, 
+            User.GetUserId(),
             dto.Text ?? string.Empty
         );
         
@@ -53,11 +57,17 @@ public class PostCommentController(IMediator mediator) : BaseApiController
         return Ok(result);
     }
     
+    [Authorize]
     [MapToApiVersion(1)]
     [HttpDelete("{commentId}")]
-    public async Task<ActionResult> DeleteComment([FromRoute]string postId, [FromRoute]string commentId, [FromQuery]string userId, CancellationToken ct)
+    public async Task<ActionResult> DeleteComment([FromRoute]string postId, [FromRoute]string commentId, CancellationToken ct)
     {
-        var command = new RemoveCommentFromPostCommand(postId, commentId, userId);
+        var command = new RemoveCommentFromPostCommand(
+            postId, 
+            commentId, 
+            User.GetUserId()
+        );
+        
         await mediator.SendCommandAsync<RemoveCommentFromPostCommand, Unit>(command, ct);
         return Ok();
     }

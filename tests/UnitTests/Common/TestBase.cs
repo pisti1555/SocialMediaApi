@@ -8,6 +8,8 @@ namespace UnitTests.Common;
 public abstract class TestBase
 {
     protected readonly IMapper Mapper = SetupMapper();
+    
+    protected readonly Mock<IAuthService> AuthServiceMock = new();
     protected readonly Mock<ICacheService> CacheServiceMock = new();
     
     private static IMapper SetupMapper()

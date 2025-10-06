@@ -15,8 +15,6 @@ public static class CacheServiceMockExtensions
     // Verifications
     public static void VerifyCacheHit<T>(this Mock<ICacheService> cacheServiceMock, string? cacheKey = null, bool happened = true)
     {
-        //cacheServiceMock.Verify(x => x.GetAsync<T>(cacheKey ?? It.IsAny<string>(), It.IsAny<CancellationToken>()), happened ? Times.Once : Times.Never);
-        //return;
         if (string.IsNullOrEmpty(cacheKey))
         {
             cacheServiceMock.Verify(x => x.GetAsync<T>(It.IsAny<string>(), It.IsAny<CancellationToken>()), happened ? Times.Once : Times.Never);

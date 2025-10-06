@@ -12,16 +12,14 @@ public class GetAllUsersPagedHandlerTest : BaseUserHandlerTest
     private readonly GetAllUsersPagedHandler _handler;
 
     private readonly PagedResult<UserResponseDto> _users;
-    private readonly string _usersCacheKey;
 
     public GetAllUsersPagedHandlerTest()
     {
-        _handler = new GetAllUsersPagedHandler(UserRepositoryMock.Object, CacheServiceMock.Object);
+        _handler = new GetAllUsersPagedHandler(UserRepositoryMock.Object);
         
         var usersList = TestDataFactory.CreateUsers(5);
         var userResponseDtoList = Mapper.Map<List<UserResponseDto>>(usersList);
         _users = PagedResult<UserResponseDto>.Create(userResponseDtoList, userResponseDtoList.Count, 1, 10);
-        _usersCacheKey = $"users-{Query.PageNumber}-{Query.PageSize}";
     }
     
     private static readonly GetAllUsersPagedQuery Query = new()
@@ -50,35 +48,16 @@ public class GetAllUsersPagedHandlerTest : BaseUserHandlerTest
     }
 
     [Fact]
-    public async Task Handle_WhenNoCacheExists_ShouldReturnPagedResultFromDatabase()
+    public async Task Handle_WhenItems_ShouldReturnPagedResult()
     {
         // Arrange
-        CacheServiceMock.SetupCache<PagedResult<UserResponseDto>?>(_usersCacheKey, null);
         UserRepositoryMock.SetupGetPaged(_users);
 
         // Act
         var result = await _handler.Handle(Query, CancellationToken.None);
 
         // Assert
-        CacheServiceMock.VerifyCacheHit<PagedResult<UserResponseDto>?>(_usersCacheKey);
         UserRepositoryMock.VerifyGetPaged();
-        
-        AssertUsersMatch(_users, result);
-    }
-    
-    [Fact]
-    public async Task Handle_WhenCacheExists_ShouldReturnPagedResultFromCache()
-    {
-        // Arrange
-        CacheServiceMock.SetupCache<PagedResult<UserResponseDto>?>(_usersCacheKey, _users);
-        UserRepositoryMock.SetupGetPaged(_users);
-
-        // Act
-        var result = await _handler.Handle(Query, CancellationToken.None);
-
-        // Assert
-        CacheServiceMock.VerifyCacheHit<PagedResult<UserResponseDto>?>(_usersCacheKey);
-        UserRepositoryMock.VerifyGetPaged(called: false);
         
         AssertUsersMatch(_users, result);
     }
@@ -87,13 +66,11 @@ public class GetAllUsersPagedHandlerTest : BaseUserHandlerTest
     public async Task Handle_WhenNoItemsFound_ShouldReturnEmptyResult()
     {
         // Arrange
-        CacheServiceMock.SetupCache<PagedResult<UserResponseDto>?>(_usersCacheKey, null);
         UserRepositoryMock.SetupGetPaged(PagedResult<UserResponseDto>.Create([], 0, 1, 10));
         
         var result = await _handler.Handle(Query, CancellationToken.None);
         
         // Assert
-        CacheServiceMock.VerifyCacheHit<PagedResult<UserResponseDto>?>(_usersCacheKey);
         UserRepositoryMock.VerifyGetPaged();
         
         Assert.NotNull(result);

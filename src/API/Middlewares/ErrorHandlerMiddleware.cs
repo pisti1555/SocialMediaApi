@@ -1,4 +1,5 @@
 ﻿using Domain.Common.Exceptions;
+using Infrastructure.Auth.Exceptions;
 using Microsoft.AspNetCore.Http.Features;
 using Microsoft.AspNetCore.Mvc;
 using ValidationException = FluentValidation.ValidationException;
@@ -30,13 +31,13 @@ public class ErrorHandlerMiddleware(
                 Detail = e.ErrorMessage,
                 Instance = $"{context.Request.Method} {context.Request.Path}"
             };
-            
-            AddProblemDetailsExtensions(problemDetails, context);
-            
+
+            AddProblemDetailsExtensions(problemDetails, context, e, env.IsDevelopment());
+
             logger.LogError(e, "Unhandled exception occurred");
-            
+
             response.StatusCode = problemDetails.Status ?? StatusCodes.Status500InternalServerError;
-            
+
             await response.WriteAsJsonAsync(problemDetails);
         }
         catch (ValidationException e)
@@ -47,22 +48,69 @@ public class ErrorHandlerMiddleware(
                     g => g.Key,
                     g => g.Select(err => err.ErrorMessage).ToArray()
                 );
-            
+
             var validationProblemDetails = new ValidationProblemDetails
             {
-                Type = env.IsDevelopment() ? e.GetType().Name : $"https://httpstatuses.com/{StatusCodes.Status400BadRequest}",
+                Type = env.IsDevelopment()
+                    ? e.GetType().Name
+                    : $"https://httpstatuses.com/{StatusCodes.Status400BadRequest}",
                 Status = StatusCodes.Status400BadRequest,
                 Title = "Validation failed",
                 Detail = "Some fields are invalid.",
                 Instance = $"{context.Request.Method} {context.Request.Path}",
                 Errors = errors
             };
-            
-            AddProblemDetailsExtensions(validationProblemDetails, context);
-            
+
+            AddProblemDetailsExtensions(validationProblemDetails, context, e, env.IsDevelopment());
+
             response.StatusCode = validationProblemDetails.Status ?? StatusCodes.Status400BadRequest;
-            
+
             await response.WriteAsJsonAsync(validationProblemDetails);
+        }
+        catch (JwtException e)
+        {
+            var problemDetails = new ProblemDetails
+            {
+                Type = env.IsDevelopment()
+                    ? e.GetType().Name
+                    : $"https://httpstatuses.com/{StatusCodes.Status500InternalServerError}",
+                Status = StatusCodes.Status500InternalServerError,
+                Title = env.IsDevelopment() ? "Jwt token service error." : "Unexpected error occurred.",
+                Detail = env.IsDevelopment()
+                    ? e.Message
+                    : "An unexpected error occurred on server side.",
+                Instance = $"{context.Request.Method} {context.Request.Path}",
+            };
+
+            AddProblemDetailsExtensions(problemDetails, context, e, env.IsDevelopment());
+
+            logger.LogCritical(e, "Jwt token service error.");
+
+            response.StatusCode = problemDetails.Status ?? StatusCodes.Status500InternalServerError;
+
+            await context.Response.WriteAsJsonAsync(problemDetails);
+        }
+        catch (IdentityOperationException e)
+        {
+            var problemDetails = new ProblemDetails
+            {
+                Type = env.IsDevelopment()
+                    ? e.GetType().Name
+                    : $"https://httpstatuses.com/{StatusCodes.Status500InternalServerError}",
+                Status = StatusCodes.Status500InternalServerError,
+                Title = env.IsDevelopment() ? "Identity operation error." : "Unexpected error occurred.",
+                Detail = env.IsDevelopment()
+                    ? e.Message
+                    : "An unexpected error occurred on server side.",
+            };
+            
+            AddProblemDetailsExtensions(problemDetails, context, e, env.IsDevelopment());
+            
+            logger.LogCritical(e, "Identity operation error.");
+            
+            response.StatusCode = problemDetails.Status ?? StatusCodes.Status500InternalServerError;
+            
+            await context.Response.WriteAsJsonAsync(problemDetails);
         }
         catch (Exception e)
         {
@@ -70,16 +118,16 @@ public class ErrorHandlerMiddleware(
             {
                 Type = env.IsDevelopment() ? e.GetType().Name : $"https://httpstatuses.com/{StatusCodes.Status500InternalServerError}",
                 Status = StatusCodes.Status500InternalServerError,
-                Title = "Unexpected error occurred",
+                Title = "Unexpected error occurred.",
                 Detail = env.IsDevelopment()
                     ? e.Message
-                    : "An unexpected error occurred",
+                    : "An unexpected error occurred.",
                 Instance = $"{context.Request.Method} {context.Request.Path}"
             };
             
-            AddProblemDetailsExtensions(problemDetails, context);
+            AddProblemDetailsExtensions(problemDetails, context, e, env.IsDevelopment());
             
-            logger.LogError(e, "Unhandled exception occurred");
+            logger.LogError(e, "Unhandled exception occurred.");
             
             response.StatusCode = problemDetails.Status ?? StatusCodes.Status500InternalServerError;
             
@@ -87,10 +135,17 @@ public class ErrorHandlerMiddleware(
         }
     }
     
-    private static void AddProblemDetailsExtensions(ProblemDetails problemDetails, HttpContext context)
+    private static void AddProblemDetailsExtensions(ProblemDetails problemDetails, HttpContext context, Exception exception, bool isDevelopment = false)
     {
         var activity = context.Features.Get<IHttpActivityFeature>()?.Activity;
         problemDetails.Extensions.TryAdd("traceId", activity?.Id);
         problemDetails.Extensions.TryAdd("requestId", context.TraceIdentifier);
+
+        if (!isDevelopment) return;
+        problemDetails.Extensions.TryAdd("stackTrace", exception.StackTrace);
+        if (exception.InnerException is not null)
+        {
+            problemDetails.Extensions.TryAdd("innerException", exception.InnerException.Message);
+        }
     }
 }

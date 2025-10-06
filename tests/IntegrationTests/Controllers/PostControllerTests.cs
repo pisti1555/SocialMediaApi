@@ -10,10 +10,11 @@ using IntegrationTests.Fixtures;
 using IntegrationTests.Fixtures.DataFixtures;
 using Microsoft.EntityFrameworkCore;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace IntegrationTests.Controllers;
 
-public class PostControllerTests(CustomWebApplicationFactoryFixture factory) : BaseControllerTest(factory), IAsyncLifetime
+public class PostControllerTests(CustomWebApplicationFactoryFixture factory, ITestOutputHelper output) : BaseControllerTest(factory), IAsyncLifetime
 {
     private const string BaseUrl = "/api/v1/posts";
     private AppUser _user = null!;
@@ -61,9 +62,11 @@ public class PostControllerTests(CustomWebApplicationFactoryFixture factory) : B
     [Fact]
     public async Task Create_WhenValidRequest_ShouldReturnCreatedResponse_WithLocationHeader_AndPostDto()
     {
-        var dto = new CreatePostDto("Test text", _user.Id.ToString());
+        var authenticatedClient = await GetAuthenticatedClientAsync(_user);
+        var dto = new CreatePostDto("Test text");
         
-        var response = await Client.PostAsJsonAsync($"{BaseUrl}", dto);
+        var response = await authenticatedClient.PostAsJsonAsync($"{BaseUrl}", dto);
+        
         var result = await response.Content.ReadFromJsonAsync<PostResponseDto>();
         
         var postInDb = await DbContext.Posts
@@ -84,23 +87,23 @@ public class PostControllerTests(CustomWebApplicationFactoryFixture factory) : B
     }
     
     [Fact]
-    public async Task Create_WhenUserNotFound_ShouldReturnBadRequestResponse()
+    public async Task Create_WhenUnauthenticated_ShouldReturnUnauthorizedResponse()
     {
-        var notExistingUserId = Guid.NewGuid().ToString();
-        var dto = new CreatePostDto("Test text", notExistingUserId);
+        var dto = new CreatePostDto("Test text");
         
         var response = await Client.PostAsJsonAsync(BaseUrl, dto);
-        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
     }
     
     [Fact]
     public async Task Update_WhenValidRequest_ShouldReturnUpdatedPost()
     {
+        var authenticatedClient = await GetAuthenticatedClientAsync(_user);
         var post = await AddPostToDbAsync(PostDataFixture.GetPost(_user));
         
-        var dto = new UpdatePostDto("Updated text", _user.Id.ToString());
+        var dto = new UpdatePostDto("Updated text");
         
-        var response = await Client.PatchAsJsonAsync($"{BaseUrl}/{post.Id.ToString()}", dto);
+        var response = await authenticatedClient.PatchAsJsonAsync($"{BaseUrl}/{post.Id.ToString()}", dto);
         var result = await response.Content.ReadFromJsonAsync<PostResponseDto>();
         
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
@@ -112,41 +115,45 @@ public class PostControllerTests(CustomWebApplicationFactoryFixture factory) : B
     [Fact]
     public async Task Update_WhenPostNotFound_ShouldReturnNotFound()
     {
+        var authenticatedClient = await GetAuthenticatedClientAsync(_user);
         var notExistingPostId = Guid.NewGuid().ToString();
-        var dto = new UpdatePostDto("Updated text", _user.Id.ToString());
+        var dto = new UpdatePostDto("Updated text");
         
-        var response = await Client.PatchAsJsonAsync($"{BaseUrl}/{notExistingPostId}", dto);
+        var response = await authenticatedClient.PatchAsJsonAsync($"{BaseUrl}/{notExistingPostId}", dto);
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
     
     [Fact]
     public async Task Update_WhenUserDoesNotOwnPost_ShouldReturnBadRequest()
     {
+        var authenticatedClient = await GetAuthenticatedClientAsync(_user);
+        
         var otherUser = AppUserDataFixture.GetUser();
         var post = await AddPostToDbAsync(PostDataFixture.GetPost(otherUser));
         
-        var dto = new UpdatePostDto("Updated text", _user.Id.ToString());
+        var dto = new UpdatePostDto("Updated text");
         
-        var response = await Client.PatchAsJsonAsync($"{BaseUrl}/{post.Id.ToString()}", dto);
+        var response = await authenticatedClient.PatchAsJsonAsync($"{BaseUrl}/{post.Id.ToString()}", dto);
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
     }
 
     [Fact]
     public async Task Delete_WhenValidRequest_ShouldReturnOk()
     {
+        var authenticatedClient = await GetAuthenticatedClientAsync(_user);
         var post = await AddPostToDbAsync(PostDataFixture.GetPost(_user));
-        
-        var response = await Client.DeleteAsync($"{BaseUrl}/{post.Id}?userId={_user.Id.ToString()}");
+        var response = await authenticatedClient.DeleteAsync($"{BaseUrl}/{post.Id}");
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
     }
     
     [Fact]
-    public async Task Delete_WhenPostNotFound_ShouldReturnBadRequest()
+    public async Task Delete_WhenPostNotFound_ShouldReturnNotFound()
     {
+        var authenticatedClient = await GetAuthenticatedClientAsync(_user);
         var notExistingPostId = Guid.NewGuid().ToString();
         
-        var response = await Client.DeleteAsync($"{BaseUrl}/{notExistingPostId}");
-        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        var response = await authenticatedClient.DeleteAsync($"{BaseUrl}/{notExistingPostId}");
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
     
     [Fact]
@@ -175,33 +182,12 @@ public class PostControllerTests(CustomWebApplicationFactoryFixture factory) : B
         var response = await Client.GetAsync($"{BaseUrl}/{notExistingPostId}");
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
-    
-    [Fact]
-    public async Task GetAllPaged_When1PostExistInCache_ShouldCacheResult_ThenReturnListWith1Post()
-    {
-        await AddPostToDbAsync(PostDataFixture.GetPost(_user));
-        
-        var response = await Client.GetAsync($"{BaseUrl}?pageNumber=1&pageSize=10");
-        var result = await response.Content.ReadFromJsonAsync<PagedResult<PostResponseDto>>();
-        
-        var cachedResult = await Cache.GetAsync<PagedResult<PostResponseDto>>(PostsPageCacheKey(1,10));
-        Assert.NotNull(cachedResult);
-        
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        
-        AssertPaginationHeadersAreValid(response, result);
-        
-        await Cache.RemoveAsync(PostsPageCacheKey(1, 10));
-    }
 
     [Fact]
-    public async Task GetAllPaged_WhenNoPostsExist_ShouldCacheResult_ThenReturnEmptyList()
+    public async Task GetAllPaged_WhenNoPostsExist_ShouldReturnEmptyList()
     {
         var response = await Client.GetAsync($"{BaseUrl}?pageNumber=1&pageSize=10");
         var result = await response.Content.ReadFromJsonAsync<PagedResult<PostResponseDto>>();
-        
-        var cachedResult = await Cache.GetAsync<PagedResult<PostResponseDto>>(PostsPageCacheKey(1, 10));
-        Assert.NotNull(cachedResult);
         
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         
@@ -213,7 +199,10 @@ public class PostControllerTests(CustomWebApplicationFactoryFixture factory) : B
     public async Task InitializeAsync()
     {
         await DbContext.Database.EnsureDeletedAsync();
+        await IdentityDbContext.Database.EnsureDeletedAsync();
+        
         await DbContext.Database.EnsureCreatedAsync();
+        await IdentityDbContext.Database.EnsureCreatedAsync();
         
         _user = AppUserDataFixture.GetUser();
         
@@ -226,5 +215,6 @@ public class PostControllerTests(CustomWebApplicationFactoryFixture factory) : B
     public async Task DisposeAsync()
     {
         await DbContext.Database.EnsureDeletedAsync();
+        await IdentityDbContext.Database.EnsureDeletedAsync();
     }
 }

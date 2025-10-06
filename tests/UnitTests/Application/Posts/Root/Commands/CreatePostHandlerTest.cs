@@ -1,5 +1,4 @@
 ﻿using Application.Requests.Posts.Root.Commands.CreatePost;
-using Application.Responses;
 using Domain.Common.Exceptions.CustomExceptions;
 using Domain.Posts;
 using Domain.Users;
@@ -18,7 +17,7 @@ public class CreatePostHandlerTest : BasePostHandlerTest
 
     public CreatePostHandlerTest()
     {
-        _createPostHandler = new CreatePostHandler(PostRepositoryMock.Object, UserRepositoryMock.Object, CacheServiceMock.Object, Mapper);
+        _createPostHandler = new CreatePostHandler(PostRepositoryMock.Object, UserRepositoryMock.Object, Mapper);
 
         _user = TestDataFactory.CreateUser();
     }
@@ -29,17 +28,15 @@ public class CreatePostHandlerTest : BasePostHandlerTest
         {
             PostRepositoryMock.Verify(x => x.Add(It.IsAny<Post>()), Times.Never);
             PostRepositoryMock.Verify(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
-            CacheServiceMock.VerifyCacheSet<PostResponseDto?>(happened: false);
             return;
         }
         
         PostRepositoryMock.Verify(x => x.Add(It.IsAny<Post>()), Times.Once);
         PostRepositoryMock.Verify(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
-        CacheServiceMock.VerifyCacheSet<PostResponseDto?>();
     }
 
     [Fact]
-    public async Task Handle_WhenValidRequest_ShouldCreatePostAndSaveItAndCacheIt()
+    public async Task Handle_WhenValidRequest_ShouldCreatePostAndSaveItToDatabase()
     {
         // Arrange
         var command = new CreatePostCommand("Test post text", _user.Id.ToString());
