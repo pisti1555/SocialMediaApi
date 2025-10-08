@@ -1,6 +1,6 @@
-﻿using Microsoft.AspNetCore.Identity;
+﻿using Infrastructure.Auth.Models;
+using Microsoft.AspNetCore.Identity;
 using Moq;
-using Persistence.Auth.Models;
 
 namespace UnitTests.Extensions;
 

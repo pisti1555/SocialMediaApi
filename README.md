@@ -51,8 +51,13 @@ All endpoints are documented and accessible via /scalar.
 The API is versioned. You must specify the version in the URL (example: /api/v1/users).
 
 ### Authentication
-The API uses JWT authentication. Tokens are generated on login and must be passed in the Authorization header.
-The token is valid for 10 minutes. GET endpoints do not require authentication.
+The API uses JWT authentication. 
+- Tokens are generated on login, register and refresh-token endpoints and must be passed in the Authorization header.
+- The token is valid for 5 minutes. 
+- The refresh token expiration depends on the RememberMe field in the login request. If remembered, the expiration time is 14 days, otherwise it is 12 hours.
+- The expiration time is a sliding window, so after refreshing, it is valid for another 14 days or 12 hours, until it reaches the maximum expiration time, which is 90 days.
+- Token can be refreshed by sending a POST request to /api/v1/auth/refresh-token. Then a new set of tokens is returned.
+- GET endpoints do not require authentication, but POST, PUT, PATCH and DELETE do.
 
 ### Pagination
 When retrieving multiple objects (lists) of an entity root (eg. AppUser or Post), the API returns a paginated response.

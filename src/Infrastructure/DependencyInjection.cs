@@ -1,5 +1,6 @@
 ﻿using Infrastructure.Auth;
 using Infrastructure.Caching;
+using Infrastructure.Hasher;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -9,6 +10,7 @@ public static class DependencyInjection
 {
     public static IServiceCollection AddInfrastructure(this IServiceCollection services, IConfiguration config)
     {
+        services.SetupHasher();
         services.SetupAuth(config);
         services.SetupCaching(config);
         

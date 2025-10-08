@@ -2,15 +2,15 @@
 using Application.Contracts.Services;
 using Infrastructure.Auth.Configuration;
 using Infrastructure.Auth.Exceptions;
+using Infrastructure.Auth.Models;
 using Infrastructure.Auth.Services;
+using Infrastructure.Persistence.DataContext;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
-using Persistence.Auth.Models;
-using Persistence.DataContext;
 
 namespace Infrastructure.Auth;
 
@@ -61,13 +61,12 @@ internal static class AuthDependencyInjection
             {
                 options.TokenValidationParameters = new TokenValidationParameters
                 {
-                    ValidIssuer = jwtConfiguration.Issuer,
-                    ValidAudience = jwtConfiguration.Audience,
-                    IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtConfiguration.SecretKey)),
-
-                    ValidateIssuer = true,
-                    ValidateAudience = true,
                     ValidateIssuerSigningKey = true,
+                    IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtConfiguration.SecretKey)),
+                    ValidateIssuer = true,
+                    ValidIssuer = jwtConfiguration.Issuer,
+                    ValidateAudience = true,
+                    ValidAudience = jwtConfiguration.Audience,
                     ValidateLifetime = true,
                     ClockSkew = TimeSpan.Zero
                 };
@@ -75,7 +74,7 @@ internal static class AuthDependencyInjection
 
         // Add authorization
         services.AddAuthorizationBuilder()
-            .AddPolicy("RequireAdminRole", policy => policy.RequireRole("Admin"));
+            .AddPolicy("Admin", policy => policy.RequireRole("Admin"));
 
         return services;
     }

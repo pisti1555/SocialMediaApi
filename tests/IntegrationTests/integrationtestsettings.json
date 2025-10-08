@@ -7,5 +7,6 @@
     "ExpirationMinutes": 10,
     "Issuer": "TestIssuer",
     "Audience": "TestAudience"
-  }
+  },
+  "HashKey": "super_secret_key_for_test_hashing"
 }
