@@ -1,11 +1,11 @@
 ﻿using Application.Contracts.Services;
 using Domain.Users;
+using Infrastructure.Auth.Models;
+using Infrastructure.Persistence.DataContext;
 using IntegrationTests.Fixtures;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
-using Persistence.Auth.Models;
-using Persistence.DataContext;
 using Xunit;
 
 namespace IntegrationTests.Common;
@@ -67,7 +67,13 @@ public abstract class BaseControllerTest : IClassFixture<CustomWebApplicationFac
             }
         }
         
-        var token = _tokenService.CreateToken(user, ["User"]);
+        var token = _tokenService.CreateAccessToken(
+            uid: user.Id.ToString(), 
+            name: user.UserName, 
+            email: user.Email,
+            roles: ["User"],
+            sid: null
+        );
         
         var client = _factory.CreateClient();
         client.DefaultRequestHeaders.Authorization = 

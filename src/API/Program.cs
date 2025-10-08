@@ -3,12 +3,12 @@ using API.Middlewares;
 using Application;
 using Infrastructure;
 using Infrastructure.Auth.Exceptions;
+using Infrastructure.Auth.Models;
+using Infrastructure.Persistence;
+using Infrastructure.Persistence.DataContext;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
-using Persistence;
-using Persistence.Auth.Models;
-using Persistence.DataContext;
 using Scalar.AspNetCore;
 using Serilog;
 

@@ -1,0 +1,38 @@
+﻿using System.Data;
+using Application.Contracts.Persistence.Cortex.Mediator;
+using Application.Contracts.Persistence.Repositories;
+using Infrastructure.Persistence.Cortex.Mediator;
+using Infrastructure.Persistence.DataContext;
+using Infrastructure.Persistence.Repositories;
+using Infrastructure.Persistence.Repositories.Interfaces;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
+
+namespace Infrastructure.Persistence;
+
+public static class PersistenceDependencyInjection
+{
+    public static IServiceCollection AddPersistence(this IServiceCollection services, IConfiguration config)
+    {
+        services.AddDbContext<AppDbContext>(opt =>
+        {
+            opt.UseNpgsql(config.GetConnectionString("Database"));
+        });
+        services.AddDbContext<AppIdentityDbContext>(opt =>
+        {
+            opt.UseNpgsql(config.GetConnectionString("IdentityDatabase"));
+        });
+        
+        services.AddScoped<IDbConnection>(sp => 
+            sp.GetRequiredService<AppDbContext>().Database.GetDbConnection()
+        );
+
+        services.AddScoped<ICustomUnitOfWork, CustomUnitOfWork>();
+
+        services.AddScoped(typeof(IRepository<,>), typeof(Repository<,>));
+        services.AddScoped(typeof(IOutsideServicesRepository<>), typeof(OutsideServicesRepository<>));
+        
+        return services;
+    }
+}

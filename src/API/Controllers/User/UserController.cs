@@ -1,10 +1,7 @@
 ﻿using API.Controllers.Common;
-using API.DTOs.Bodies.Users;
 using API.DTOs.Params;
 using API.Extensions;
 using Application.Common.Pagination;
-using Application.Requests.Users.Root.Commands.CreateUser;
-using Application.Requests.Users.Root.Commands.Login;
 using Application.Requests.Users.Root.Queries.GetAllPaged;
 using Application.Requests.Users.Root.Queries.GetById;
 using Application.Responses;
@@ -18,36 +15,6 @@ namespace API.Controllers.User;
 [Route("api/v{v:ApiVersion}/users")]
 public class UserController(IMediator mediator) : BaseApiController
 {
-    [MapToApiVersion(1)]
-    [HttpPost("login")]
-    public async Task<ActionResult<AuthenticatedUserResponseDto>> Login([FromBody]LoginDto dto, CancellationToken ct)
-    {
-        var command = new LoginCommand(
-            dto.UserName ?? string.Empty, 
-            dto.Password ?? string.Empty
-        );
-        
-        var result = await mediator.SendCommandAsync<LoginCommand, AuthenticatedUserResponseDto>(command, ct);
-        return result;
-    }
-    
-    [MapToApiVersion(1)]
-    [HttpPost("register")]
-    public async Task<ActionResult<AuthenticatedUserResponseDto>> Create([FromBody]CreateUserDto dto, CancellationToken ct)
-    {
-        var command = new CreateUserCommand(
-            dto.UserName ?? string.Empty, 
-            dto.Email ?? string.Empty, 
-            dto.Password ?? string.Empty,
-            dto.FirstName ?? string.Empty, 
-            dto.LastName ?? string.Empty, 
-            dto.DateOfBirth ?? string.Empty
-        );
-        
-        var result = await mediator.SendCommandAsync<CreateUserCommand, AuthenticatedUserResponseDto>(command, ct);
-        return CreatedAtAction(nameof(GetById), new {id = result.Id}, result);
-    }
-    
     [MapToApiVersion(1)]
     [HttpGet("{id}")]
     public async Task<ActionResult<UserResponseDto>> GetById([FromRoute]string id, CancellationToken ct)

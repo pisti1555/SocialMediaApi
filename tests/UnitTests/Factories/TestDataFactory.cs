@@ -3,6 +3,7 @@ using Domain.Posts;
 using Domain.Posts.Factories;
 using Domain.Users;
 using Domain.Users.Factories;
+using Infrastructure.Auth.Models;
 
 namespace UnitTests.Factories;
 
@@ -85,6 +86,37 @@ internal static class TestDataFactory
                 PostLikeFactory.Create(actualUser, actualPost, true)
             ).UseSeed(seed);
     }
+    
+    private static Faker<Token> TokenFaker(bool isExpired, bool useNewSeed = false)
+    {
+        var seed = 40;
+        if (useNewSeed)
+        {
+            seed = Random.Shared.Next(10, int.MaxValue);
+        }
+        
+        return new Faker<Token>()
+            .CustomInstantiator(x =>
+                {
+                    var sid = x.Random.Guid().ToString("N");
+                    var userId = x.Random.Guid();
+                    var jtiHash = x.Random.Hash();
+                    var refreshHash = x.Random.Hash();
+                    var isLongSession = x.Random.Bool();
+
+                    var token = Token.CreateToken(sid, userId, jtiHash, refreshHash, isLongSession);
+
+                    if (isExpired)
+                    {
+                        typeof(Token)
+                            .GetProperty("ExpiresAt", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Public)!
+                            .SetValue(token, DateTime.UtcNow.AddMinutes(-1));
+                    }
+
+                    return token;
+                }
+            ).UseSeed(seed);
+    }
 
 
     // --- Factories ---
@@ -109,6 +141,9 @@ internal static class TestDataFactory
         LikeFaker(user, post, useNewSeed).Generate();
     internal static List<PostLike> CreateLikes(int count, Post? post = null, AppUser? user = null, bool useNewSeed = false) => 
         LikeFaker(user, post, useNewSeed).Generate(count);
+    
+    internal static Token CreateToken(bool isExpired = false, bool useNewSeed = false) => 
+        TokenFaker(isExpired, useNewSeed).Generate();
 
 
     // --- Helpers ---

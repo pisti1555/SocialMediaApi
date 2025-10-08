@@ -10,6 +10,7 @@ public class UserProfile : Profile
     {
         CreateMap<AppUser, UserResponseDto>();
         CreateMap<AppUser, AuthenticatedUserResponseDto>()
-            .ForMember(x => x.Token, opt => opt.Ignore());
+            .ForMember(x => x.AccessToken, opt => opt.Ignore())
+            .ForMember(x => x.RefreshToken, opt => opt.Ignore());
     }
 }
