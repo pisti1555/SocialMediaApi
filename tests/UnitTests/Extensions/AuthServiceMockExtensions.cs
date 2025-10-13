@@ -8,7 +8,7 @@ namespace UnitTests.Extensions;
 
 public static class AuthServiceMockExtensions
 {
-    public static void SetupCreateIdentityUserFromAppUserAsync(this Mock<IAuthService> authServiceMock, IdentityUserCreationResult result)
+    public static void SetupCreateIdentityUserFromAppUserAsync(this Mock<IAuthService> authServiceMock, AppResult result)
     {
         authServiceMock
             .Setup(x => x.CreateIdentityUserFromAppUserAsync(It.IsAny<AppUser>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))

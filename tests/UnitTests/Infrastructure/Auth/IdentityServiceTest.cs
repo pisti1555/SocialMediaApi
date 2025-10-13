@@ -34,6 +34,7 @@ public class IdentityServiceTest
         _tokenRepositoryMock = new Mock<IOutsideServicesRepository<Token>>();
         _tokenServiceMock = new Mock<ITokenService>();
         _hasherMock = new Mock<IHasher>();
+        var loggerMock = new Mock<ILogger<IdentityService>>();
         
         var store = new Mock<IUserStore<AppIdentityUser>>();
         _userManagerMock = new Mock<UserManager<AppIdentityUser>>
@@ -53,7 +54,8 @@ public class IdentityServiceTest
             _userManagerMock.Object, 
             _tokenServiceMock.Object, 
             _tokenRepositoryMock.Object, 
-            _hasherMock.Object
+            _hasherMock.Object,
+            loggerMock.Object
         );
         
         _appUser = TestDataFactory.CreateUser();
@@ -101,7 +103,7 @@ public class IdentityServiceTest
             .Returns(claims);
 
         // Act & Assert
-        await Assert.ThrowsAsync<IdentityOperationException>(() => 
+        await Assert.ThrowsAsync<UnauthorizedException>(() => 
             _identityService.SaveTokenAsync("test-access-token", "test-refresh-token", false));
     }
     
@@ -119,7 +121,7 @@ public class IdentityServiceTest
             .Returns(claims);
 
         // Act & Assert
-        await Assert.ThrowsAsync<IdentityOperationException>(() => 
+        await Assert.ThrowsAsync<UnauthorizedException>(() => 
             _identityService.SaveTokenAsync("test-access-token", "test-refresh-token", false));
     }
     
@@ -129,23 +131,17 @@ public class IdentityServiceTest
     public async Task UpdateTokenAsync_WhenValid_ShouldUpdateToken()
     {
         // Arrange
-        var sid = Guid.NewGuid().ToString("N");
-        var userId = Guid.NewGuid();
-        var oldJti = Guid.NewGuid().ToString("N");
-        var newJti = Guid.NewGuid().ToString("N");
-        var oldRefreshToken = "old-refresh-token";
-        var newRefreshToken = "new-refresh-token";
-        
-        var oldRefreshTokenHash = "hashed-refresh-token";
-        var newRefreshTokenHash = "hashed-new-refresh-token";
-        
-        var oldJtiHash = "hashed-jti";
-        var newJtiHash = "hashed-new-jti";
-        
         var originalToken = TestDataFactory.CreateToken();
         
-        _hasherMock.Setup(x => x.CreateHash(oldRefreshToken)).Returns(oldRefreshTokenHash);
-        _hasherMock.Setup(x => x.CreateHash(oldJti)).Returns(oldJtiHash);
+        var oldJti = Guid.NewGuid().ToString("N");
+        var newJti = Guid.NewGuid().ToString("N");
+        var newJtiHash = "hashed-new-jti";
+        var oldRefreshToken = "old-refresh-token";
+        var newRefreshToken = "new-refresh-token";
+        var newRefreshTokenHash = "hashed-new-refresh-token";
+        
+        _hasherMock.Setup(x => x.CreateHash(oldRefreshToken)).Returns(originalToken.RefreshTokenHash);
+        _hasherMock.Setup(x => x.CreateHash(oldJti)).Returns(originalToken.JtiHash);
         
         _hasherMock.Setup(x => x.CreateHash(newRefreshToken)).Returns(newRefreshTokenHash);
         _hasherMock.Setup(x => x.CreateHash(newJti)).Returns(newJtiHash);
@@ -157,8 +153,8 @@ public class IdentityServiceTest
         await _identityService.UpdateTokenAsync(
             oldRefreshToken, 
             newRefreshToken, 
-            sid, 
-            userId.ToString(), 
+            originalToken.Id, 
+            originalToken.UserId.ToString(), 
             oldJti, 
             newJti, 
             CancellationToken.None
@@ -188,38 +184,88 @@ public class IdentityServiceTest
     }
     
     [Fact]
-    public async Task UpdateTokenAsync_WhenInvalidUserId_ShouldThrowUnauthorizedException()
-    {
-        // Act & Assert
-        await Assert.ThrowsAsync<UnauthorizedException>(() =>
-            _identityService.UpdateTokenAsync("refresh-token", "new-refresh-token", "sid", "INVALID_GUID", "jti", "new-jti")
-        );
-    }
-    
-    [Fact]
-    public async Task UpdateTokenAsync_WhenTokenNotFound_ShouldThrowUnauthorizedException()
+    public async Task UpdateTokenAsync_WhenTokenCannotBeFoundBySessionID_ShouldThrowUnauthorizedException()
     {
         // Arrange
-        var sid = Guid.NewGuid().ToString("N");
-        var uid = Guid.NewGuid().ToString("N");
-
-        _hasherMock.Setup(x => x.CreateHash(It.IsAny<string>())).Returns("hashed-value");
+        var originalToken = TestDataFactory.CreateToken();
+        
+        var oldJti = Guid.NewGuid().ToString("N");
+        var newJti = Guid.NewGuid().ToString("N");
+        var newJtiHash = "hashed-new-jti";
+        var oldRefreshToken = "old-refresh-token";
+        var newRefreshToken = "new-refresh-token";
+        var newRefreshTokenHash = "hashed-new-refresh-token";
+        
+        _hasherMock.Setup(x => x.CreateHash(oldRefreshToken)).Returns(originalToken.RefreshTokenHash);
+        _hasherMock.Setup(x => x.CreateHash(oldJti)).Returns(originalToken.JtiHash);
+        
+        _hasherMock.Setup(x => x.CreateHash(newRefreshToken)).Returns(newRefreshTokenHash);
+        _hasherMock.Setup(x => x.CreateHash(newJti)).Returns(newJtiHash);
+        
         _tokenRepositoryMock.Setup(x => x.GetAsync(It.IsAny<Expression<Func<Token, bool>>>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync((Token?)null);
-
+        
         // Act & Assert
         await Assert.ThrowsAsync<UnauthorizedException>(() =>
-            _identityService.UpdateTokenAsync("refresh-token", "new-refresh-token", sid, uid, "jti", "new-jti")
+            _identityService.UpdateTokenAsync(oldRefreshToken, newRefreshToken, "will-not-find-token-by-sid", originalToken.UserId.ToString(), oldJti, newJti)
         );
+    }
+    
+    [Theory]
+    [InlineData("different-user-id", null, null)]
+    [InlineData(null, "different-jti", null)]
+    [InlineData(null, null, "different-refresh-token")]
+    public async Task UpdateTokenAsync_WhenTokenDataDoesNotMatchWithProvidedData_ShouldDeleteToken_ThenThrowUnauthorizedException(
+        string? differentUserId, string? differentJti, string? differentRefreshToken
+    )
+    {
+        // Arrange
+        var originalToken = TestDataFactory.CreateToken();
+        
+        var oldJti = Guid.NewGuid().ToString("N");
+        var newJti = Guid.NewGuid().ToString("N");
+        var newJtiHash = "hashed-new-jti";
+        var oldRefreshToken = "old-refresh-token";
+        var newRefreshToken = "new-refresh-token";
+        var newRefreshTokenHash = "hashed-new-refresh-token";
+        
+        _hasherMock.Setup(x => x.CreateHash(oldRefreshToken)).Returns(originalToken.RefreshTokenHash);
+        _hasherMock.Setup(x => x.CreateHash(oldJti)).Returns(originalToken.JtiHash);
 
-        _hasherMock.Verify(x => x.CreateHash(It.IsAny<string>()), Times.Exactly(2));
-        _tokenRepositoryMock.Verify(x => x.GetAsync(It.IsAny<Expression<Func<Token, bool>>>(), It.IsAny<CancellationToken>()), Times.Once);
-        _tokenRepositoryMock.Verify(x => x.Update(It.IsAny<Token>()), Times.Never);
-        _tokenRepositoryMock.Verify(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
+        if (!string.IsNullOrEmpty(differentJti))
+        {
+            _hasherMock.Setup(x => x.CreateHash(differentJti)).Returns("different-jti-hash");
+        }
+
+        if (!string.IsNullOrEmpty(differentRefreshToken))
+        {
+            _hasherMock.Setup(x => x.CreateHash(differentRefreshToken)).Returns("different-refresh-token-hash");
+        }
+        
+        _hasherMock.Setup(x => x.CreateHash(newRefreshToken)).Returns(newRefreshTokenHash);
+        _hasherMock.Setup(x => x.CreateHash(newJti)).Returns(newJtiHash);
+        
+        _tokenRepositoryMock.Setup(x => x.GetAsync(It.IsAny<Expression<Func<Token, bool>>>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(originalToken);
+        
+        // Act & Assert
+        await Assert.ThrowsAsync<UnauthorizedException>(() =>
+            _identityService.UpdateTokenAsync(
+                differentRefreshToken ?? oldRefreshToken, 
+                newRefreshToken, 
+                originalToken.Id, 
+                differentUserId ?? originalToken.UserId.ToString(), 
+                differentJti ?? oldJti, 
+                newJti
+            )
+        );
+        
+        _tokenRepositoryMock.Verify(x => x.Delete(originalToken), Times.Once);
+        _tokenRepositoryMock.Verify(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
     }
     
     [Fact]
-    public async Task UpdateTokenAsync_WhenTokenExpired_ShouldThrowUnauthorizedException()
+    public async Task UpdateTokenAsync_WhenTokenExpired_ShouldDeleteToken_ThenThrowUnauthorizedException()
     {
         // Arrange
         var sid = Guid.NewGuid().ToString("N");
@@ -236,6 +282,8 @@ public class IdentityServiceTest
             _identityService.UpdateTokenAsync("old-refresh", "new-refresh", sid, uid.ToString(), "old-jti", "new-jti")
         );
 
+        _tokenRepositoryMock.Verify(x => x.Delete(token), Times.Once);
+        _tokenRepositoryMock.Verify(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
         _tokenRepositoryMock.Verify(x => x.Update(It.IsAny<Token>()), Times.Never);
     }
 

@@ -14,16 +14,12 @@ namespace UnitTests.Application.Auth.Commands;
 public class RegistrationHandlerTest : BaseUserHandlerTest
 {
     private readonly Mock<ITokenService> _tokenServiceMock = new();
-    private readonly IdentityUserCreationResult _result;
+    private readonly AppResult _result;
     private readonly RegistrationHandler _registrationHandler;
 
     public RegistrationHandlerTest()
     {
-        _result = new IdentityUserCreationResult
-        {
-            Succeeded = true,
-            Errors = []
-        };
+        _result = AppResult.Success();
         
         _registrationHandler = new RegistrationHandler(
             UserRepositoryMock.Object,
@@ -188,11 +184,7 @@ public class RegistrationHandlerTest : BaseUserHandlerTest
             "1990-01-01",
             false
         );
-        var failedCreationResult = new IdentityUserCreationResult
-        {
-            Succeeded = false,
-            Errors = ["Some error message."]
-        };
+        var failedCreationResult = AppResult.Failure(["Some error message."]);
         
         UserRepositoryMock.SetupUserExistsByAnyFilters(false);
         AuthServiceMock.SetupCreateIdentityUserFromAppUserAsync(failedCreationResult);
