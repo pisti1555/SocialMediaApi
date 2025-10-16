@@ -1,7 +1,6 @@
 ﻿using System.Text;
 using Application.Contracts.Services;
 using Infrastructure.Auth.Configuration;
-using Infrastructure.Auth.Exceptions;
 using Infrastructure.Auth.Models;
 using Infrastructure.Auth.Services;
 using Infrastructure.Persistence.DataContext;
@@ -38,17 +37,18 @@ internal static class AuthDependencyInjection
             .AddDefaultTokenProviders();
         
         // Validate JWT options
-        services.Configure<JwtConfiguration>(config.GetSection("Jwt"));
-        services.AddSingleton<IValidateOptions<JwtConfiguration>, JwtConfigurationValidation>();
+        services.AddOptions<JwtConfiguration>()
+            .BindConfiguration("Jwt")
+            .ValidateDataAnnotations()
+            .ValidateOnStart();
         
         // Add token and auth services
         services.AddScoped<ITokenService, JwtTokenService>();
         services.AddScoped<IAuthService, IdentityService>();
         
         // Read JWT options
-        var jwtConfiguration = config.GetSection("Jwt").Get<JwtConfiguration>();
-        if (jwtConfiguration is null)
-            throw new JwtException("JWT configuration is missing.");
+        var serviceProvider = services.BuildServiceProvider();
+        var jwtConfiguration = serviceProvider.GetRequiredService<IOptions<JwtConfiguration>>().Value;
         
         // Add authentication
         services
@@ -61,6 +61,9 @@ internal static class AuthDependencyInjection
             {
                 options.TokenValidationParameters = new TokenValidationParameters
                 {
+                    ValidAlgorithms = [SecurityAlgorithms.HmacSha256],
+                    RequireExpirationTime = true,
+                    RequireSignedTokens = true,
                     ValidateIssuerSigningKey = true,
                     IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtConfiguration.SecretKey)),
                     ValidateIssuer = true,

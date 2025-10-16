@@ -1,4 +1,7 @@
-﻿using Bogus;
+﻿using System.Security.Claims;
+using Application.Common.Adapters.Auth;
+using Application.Contracts.Auth;
+using Bogus;
 using Domain.Posts;
 using Domain.Posts.Factories;
 using Domain.Users;
@@ -89,7 +92,7 @@ internal static class TestDataFactory
     
     private static Faker<Token> TokenFaker(bool isExpired, bool useNewSeed = false)
     {
-        var seed = 40;
+        var seed = 50;
         if (useNewSeed)
         {
             seed = Random.Shared.Next(10, int.MaxValue);
@@ -114,6 +117,43 @@ internal static class TestDataFactory
                     }
 
                     return token;
+                }
+            ).UseSeed(seed);
+    }
+
+    private static Faker<AccessTokenClaims> AccessTokenClaimsFaker(bool useNewSeed = false)
+    {
+        var seed = 60;
+        if (useNewSeed)
+        {
+            seed = Random.Shared.Next(10, int.MaxValue);
+        }
+        
+        return new Faker<AccessTokenClaims>()
+            .CustomInstantiator(faker =>
+                {
+                    var uid = Guid.NewGuid().ToString();
+                    var claims = new List<Claim>
+                    {
+                        new(TokenClaims.TokenId, Guid.NewGuid().ToString("N")),
+                        new(TokenClaims.SessionId, Guid.NewGuid().ToString("N")),
+                        new(TokenClaims.UserId, uid),
+                        new(TokenClaims.Name, faker.Name.FirstName().ToLower()),
+                        new(TokenClaims.Email, faker.Internet.Email()),
+                        new(TokenClaims.Subject, uid),
+                        new(TokenClaims.IssuedAt, DateTimeOffset.UtcNow.ToUnixTimeSeconds().ToString(), ClaimValueTypes.Integer64),
+                        new(TokenClaims.Expiration, DateTimeOffset.UtcNow.AddMinutes(60).ToUnixTimeSeconds().ToString(), ClaimValueTypes.Integer64),
+                        new(TokenClaims.NotBefore, DateTimeOffset.UtcNow.ToUnixTimeSeconds().ToString(), ClaimValueTypes.Integer64),
+                        new(TokenClaims.Issuer, "Test issuer"),
+                        new(TokenClaims.Audience, "Test audience"),
+                        new(TokenClaims.Role, "User")
+                    };
+                    
+                    var result = AccessTokenClaims.Create(claims);
+                    if (!result.Succeeded || result.Data is null)
+                        throw new Exception("Failed to create AccessTokenClaims for tests");
+
+                    return result.Data;
                 }
             ).UseSeed(seed);
     }
@@ -145,6 +185,8 @@ internal static class TestDataFactory
     internal static Token CreateToken(bool isExpired = false, bool useNewSeed = false) => 
         TokenFaker(isExpired, useNewSeed).Generate();
 
+    internal static AccessTokenClaims CreateAccessTokenClaims(bool useNewSeed = false) => 
+        AccessTokenClaimsFaker(useNewSeed).Generate();
 
     // --- Helpers ---
     internal static (AppUser User, Post Post, List<PostComment> Comments, List<PostLike> Likes) 

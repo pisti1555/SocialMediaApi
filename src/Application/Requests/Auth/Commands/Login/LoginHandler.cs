@@ -12,6 +12,7 @@ public class LoginHandler(
     IRepository<AppUser, UserResponseDto> repository, 
     IAuthService authService,
     ITokenService tokenService,
+    IHasher hasher,
     IMapper mapper
 ) : ICommandHandler<LoginCommand, AuthenticatedUserResponseDto>
 {
@@ -30,8 +31,23 @@ public class LoginHandler(
             sid: null
         );
         var refreshToken = tokenService.CreateRefreshToken();
+        
+        var claims = tokenService.GetValidatedClaimsFromToken(accessToken).Data;
 
-        await authService.SaveTokenAsync(accessToken, refreshToken, command.RememberMe, cancellationToken);
+        var result = await authService.SaveTokenAsync(
+            jtiHash: hasher.CreateHash(claims.Jti), 
+            refreshTokenHash: hasher.CreateHash(refreshToken), 
+            sid: claims.Sid, 
+            userId: claims.Uid, 
+            isLongSession: command.RememberMe, 
+            ct: cancellationToken
+        );
+
+        if (!result.Succeeded)
+        {
+            var message = result.Errors.FirstOrDefault() ?? "Could not create token.";
+            throw new UnauthorizedException(message);
+        }
         
         var responseDto = mapper.Map<AuthenticatedUserResponseDto>(user);
         responseDto.AccessToken = accessToken;

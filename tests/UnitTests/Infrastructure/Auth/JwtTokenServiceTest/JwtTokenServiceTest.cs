@@ -117,31 +117,37 @@ public class JwtTokenServiceTest
     public void GetClaimsFromToken_WhenValidToken_ShouldReturnClaims()
     {
         // Arrange
-        var claims = new[]
-        {
-            new Claim(TokenClaims.SessionId, Guid.NewGuid().ToString()),
-            new Claim(TokenClaims.UserId, Guid.NewGuid().ToString()),
-            new Claim(TokenClaims.Name, "Test User"),
-            new Claim(TokenClaims.Email, "test@example.com"),
-            new Claim(TokenClaims.Role, "User"),
-            new Claim(TokenClaims.Role, "Admin")
-        };
+        var uid = Guid.NewGuid().ToString("N");
+        var claims = CreateValidClaims(uid);
+        
         var tokenHandler = new JwtSecurityTokenHandler();
         var token = tokenHandler.CreateJwtSecurityToken(subject: new ClaimsIdentity(claims));
         var tokenString = tokenHandler.WriteToken(token);
         
         // Act
-        var result = _jwtTokenService.GetClaimsFromToken(tokenString);
+        var result = _jwtTokenService.GetValidatedClaimsFromToken(tokenString);
         
         // Assert
-        Assert.NotEmpty(result);
+        Assert.True(result.Succeeded);
+        Assert.Empty(result.Errors);
+        Assert.NotNull(result.Data);
         
-        AssertClaimsMatch(result, TokenClaims.SessionId, claims[0].Value);
-        AssertClaimsMatch(result, TokenClaims.UserId, claims[1].Value);
-        AssertClaimsMatch(result, TokenClaims.Name, claims[2].Value);
-        AssertClaimsMatch(result, TokenClaims.Email, claims[3].Value);
+        Assert.False(string.IsNullOrWhiteSpace(result.Data.Jti));
+        Assert.False(string.IsNullOrWhiteSpace(result.Data.Sid));
+        Assert.False(string.IsNullOrWhiteSpace(result.Data.Uid));
+        Assert.False(string.IsNullOrWhiteSpace(result.Data.Name));
+        Assert.False(string.IsNullOrWhiteSpace(result.Data.Email));
+        Assert.False(string.IsNullOrWhiteSpace(result.Data.Iss));
+        Assert.False(string.IsNullOrWhiteSpace(result.Data.Aud));
+        Assert.False(string.IsNullOrWhiteSpace(result.Data.Sub));
+        Assert.False(string.IsNullOrWhiteSpace(result.Data.Iat));
+        Assert.False(string.IsNullOrWhiteSpace(result.Data.Exp));
+        Assert.False(string.IsNullOrWhiteSpace(result.Data.Nbf));
         
-        AssertRolesContain(result, ["Admin", "User"]);
+        Assert.Contains(result.Data.Roles, x => x == "User");
+        Assert.Contains(result.Data.Roles, x => x == "Admin");
+        
+        Assert.Equal(result.Data.Uid, result.Data.Sub);
     }
     
     [Fact]
@@ -155,7 +161,6 @@ public class JwtTokenServiceTest
         // Act
         var result = _jwtTokenService.ValidateToken(
             token: token, 
-            claims: claims, 
             withExpiration: true
         );
         
@@ -173,7 +178,6 @@ public class JwtTokenServiceTest
 
         var result = _jwtTokenService.ValidateToken(
             token: token, 
-            claims: claims, 
             withExpiration: false
         );
 
@@ -191,7 +195,6 @@ public class JwtTokenServiceTest
         // Act
         var result = _jwtTokenService.ValidateToken(
             token: token, 
-            claims: claims, 
             withExpiration: true
         );
         
@@ -199,36 +202,24 @@ public class JwtTokenServiceTest
         Assert.False(result);
     }
     
-    [Fact]
-    public void ValidateToken_WhenMissingClaim_ShouldReturnFalse()
+    [Theory]
+    [InlineData(TokenClaims.TokenId)]
+    [InlineData(TokenClaims.SessionId)]
+    [InlineData(TokenClaims.Subject)]
+    [InlineData(TokenClaims.UserId)]
+    [InlineData(TokenClaims.Name)]
+    [InlineData(TokenClaims.Email)]
+    [InlineData(TokenClaims.Role)]
+    public void ValidateToken_WhenMissingClaim_ShouldReturnFalse(string type)
     {
         var uid = Guid.NewGuid().ToString("N");
         var claims = CreateValidClaims(uid);
-        claims.RemoveAll(c => c.Type == TokenClaims.Email); // Delete a required claim
+        claims.RemoveAll(c => c.Type == type); // Delete a required claim
         
         var token = GenerateJwt(_jwtConfiguration, claims);
 
         var result = _jwtTokenService.ValidateToken(
             token: token, 
-            claims: claims, 
-            withExpiration: true
-        );
-
-        Assert.False(result);
-    }
-    
-    [Fact]
-    public void ValidateToken_WhenNoRoles_ShouldReturnFalse()
-    {
-        var uid = Guid.NewGuid().ToString("N");
-        var claims = CreateValidClaims(uid);
-        claims.RemoveAll(c => c.Type == TokenClaims.Role); // Delete roles claim
-        
-        var token = GenerateJwt(_jwtConfiguration, claims);
-
-        var result = _jwtTokenService.ValidateToken(
-            token: token, 
-            claims: claims, 
             withExpiration: true
         );
 
@@ -245,7 +236,6 @@ public class JwtTokenServiceTest
 
         var result = _jwtTokenService.ValidateToken(
             token: token, 
-            claims: claims, 
             withExpiration: true
         );
 
@@ -269,7 +259,6 @@ public class JwtTokenServiceTest
 
         var result = _jwtTokenService.ValidateToken(
             token: token, 
-            claims: claims, 
             withExpiration: true
         );
 
@@ -294,7 +283,6 @@ public class JwtTokenServiceTest
 
         var result = _jwtTokenService.ValidateToken(
             token: token, 
-            claims: claims, 
             withExpiration: true
         );
 

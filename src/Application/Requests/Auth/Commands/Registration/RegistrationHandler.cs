@@ -16,27 +16,25 @@ public class RegistrationHandler(
     IRepository<AppUser, UserResponseDto> repository,
     ITokenService tokenService,
     IAuthService authService,
+    IHasher hasher,
     IMapper mapper
 ) : ICommandHandler<RegistrationCommand, AuthenticatedUserResponseDto>
 {
-    private const int MinAge = 13;
-    
     public async Task<AuthenticatedUserResponseDto> Handle(RegistrationCommand request, CancellationToken cancellationToken)
     {
         await ThrowIfUserAlreadyExistsByUsername(request.UserName);
         await ThrowIfUserAlreadyExistsByEmail(request.Email);
         
         var dob = Parser.ParseDateOrThrow(request.DateOfBirth);
-        ValidateDateOfBirth(dob);
         
         var user = AppUserFactory.Create(
             request.UserName, request.Email, request.FirstName, request.LastName, dob
         );
 
-        var result = await authService.CreateIdentityUserFromAppUserAsync(user, request.Password, cancellationToken);
-        if (!result.Succeeded)
+        var createAuthUserResult = await authService.CreateIdentityUserAsync(user, request.Password, cancellationToken);
+        if (!createAuthUserResult.Succeeded)
         {
-            throw new ValidationException(result.Errors.Select(x => new ValidationFailure("", x)));
+            throw new ValidationException(createAuthUserResult.Errors.Select(x => new ValidationFailure("", x)));
         }
         
         repository.Add(user);
@@ -56,8 +54,27 @@ public class RegistrationHandler(
             sid: null
         );
         var refreshToken = tokenService.CreateRefreshToken();
+        
+        var claims = tokenService.GetValidatedClaimsFromToken(accessToken).Data;
 
-        await authService.SaveTokenAsync(accessToken, refreshToken, request.RememberMe, cancellationToken);
+        var tokenResult = await authService.SaveTokenAsync(
+            jtiHash: hasher.CreateHash(claims.Jti),  
+            refreshTokenHash: hasher.CreateHash(refreshToken),  
+            sid: claims.Sid, 
+            userId: claims.Uid, 
+            isLongSession: request.RememberMe, 
+            ct: cancellationToken
+        );
+
+        if (!tokenResult.Succeeded)
+        {
+            await authService.DeleteIdentityUserAsync(user);
+            
+            repository.Delete(user);
+            await repository.SaveChangesAsync(cancellationToken);
+            
+            throw new BadRequestException("Could not create access.");
+        }
         
         var authenticatedUserResponseDto = mapper.Map<AuthenticatedUserResponseDto>(user);
         authenticatedUserResponseDto.AccessToken = accessToken;
@@ -68,29 +85,12 @@ public class RegistrationHandler(
 
     private async Task ThrowIfUserAlreadyExistsByUsername(string username)
     {
-        var exists = await repository.ExistsAsync(x => x.UserName == username);
-        if (exists)
+        if (await repository.ExistsAsync(x => x.UserName == username))
             throw new BadRequestException("Username already exists.");
     }
     private async Task ThrowIfUserAlreadyExistsByEmail(string email)
     {
-        var exists = await repository.ExistsAsync(x => x.Email == email);
-        if (exists)
+        if (await repository.ExistsAsync(x => x.Email == email))
             throw new BadRequestException("Email already exists.");
-    }
-
-    private static void ValidateDateOfBirth(DateOnly dateOfBirth)
-    {
-        if (dateOfBirth == default)
-            throw new BadRequestException("Date of birth is required.");
-        
-        if (dateOfBirth >= DateOnly.FromDateTime(DateTime.Now))
-            throw new BadRequestException("Date of birth is invalid.");
-        
-        if (dateOfBirth < DateOnly.FromDateTime(new DateTime(1900, 1, 1)))
-            throw new BadRequestException("Date of birth is invalid.");
-        
-        if (DateOnly.FromDateTime(DateTime.UtcNow.AddYears(-MinAge)) < dateOfBirth)
-            throw new BadRequestException("Minimum age is 13.");
     }
 }

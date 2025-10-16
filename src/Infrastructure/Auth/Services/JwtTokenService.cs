@@ -2,6 +2,8 @@
 using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Text;
+using Application.Common.Adapters.Auth;
+using Application.Common.Results;
 using Application.Contracts.Auth;
 using Application.Contracts.Services;
 using Infrastructure.Auth.Configuration;
@@ -22,12 +24,39 @@ public sealed class JwtTokenService(IOptions<JwtConfiguration> jwtConfiguration)
             throw new JwtException("Credentials are missing.");
         }
         
-        var key = CreateSecurityKey();
+        var claims = new List<Claim>
+        {
+            new(TokenClaims.SessionId, sid ?? Guid.NewGuid().ToString("N")),
+            new(TokenClaims.UserId, uid),
+            new(TokenClaims.Name, name),
+            new(TokenClaims.Email, email),
+            
+            new(TokenClaims.Subject, uid),
+            new(TokenClaims.TokenId, Guid.NewGuid().ToString("N")),
+            new(TokenClaims.IssuedAt,
+                DateTimeOffset.UtcNow.ToUnixTimeSeconds().ToString(),
+                ClaimValueTypes.Integer64)
+        };
+        claims.AddRange(roles.Select(role => new Claim(TokenClaims.Role, role)));
         
-        var claims = CreateClaims(uid, name, email, sid, roles);
-        var credentials = new SigningCredentials(key, SecurityAlgorithms.HmacSha256Signature);
+        var credentials = new SigningCredentials(
+            key: new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_jwtConfiguration.SecretKey)), 
+            algorithm: SecurityAlgorithms.HmacSha256Signature
+        );
 
-        return GenerateToken(claims, credentials);
+        var tokenDescriptor = new SecurityTokenDescriptor
+        {
+            Subject = new ClaimsIdentity(claims),
+            Expires = DateTime.UtcNow.AddMinutes(_jwtConfiguration.ExpirationMinutes),
+            SigningCredentials = credentials,
+            Issuer = _jwtConfiguration.Issuer,
+            Audience = _jwtConfiguration.Audience
+        };
+
+        var tokenHandler = new JwtSecurityTokenHandler();
+        var token = tokenHandler.CreateToken(tokenDescriptor);
+
+        return tokenHandler.WriteToken(token);
     }
 
     public string CreateRefreshToken()
@@ -43,46 +72,29 @@ public sealed class JwtTokenService(IOptions<JwtConfiguration> jwtConfiguration)
             .TrimEnd('=');
     }
 
-    public List<Claim> GetClaimsFromToken(string token)
+    public AppResult<AccessTokenClaims?> GetValidatedClaimsFromToken(string token)
     {
         var tokenHandler = new JwtSecurityTokenHandler();
         var jwtSecurityToken = tokenHandler.ReadJwtToken(token) ?? throw new JwtException("Invalid token.");
-        return jwtSecurityToken.Claims.ToList();
+        var claims = jwtSecurityToken.Claims.ToList();
+        
+        return AccessTokenClaims.Create(claims);
     }
 
-    public bool ValidateToken(string token, List<Claim> claims, bool withExpiration = true)
+    public bool ValidateToken(string token, bool withExpiration = true)
     {
-        var jti = claims.FirstOrDefault(x => x.Type == TokenClaims.TokenId)?.Value;
-        var sid = claims.FirstOrDefault(x => x.Type == TokenClaims.SessionId)?.Value;
-        var nameId = claims.FirstOrDefault(x => x.Type == TokenClaims.UserId)?.Value;
-        var name = claims.FirstOrDefault(x => x.Type == TokenClaims.Name)?.Value;
-        var email = claims.FirstOrDefault(x => x.Type == TokenClaims.Email)?.Value;
-        var roles = claims.Where(x => x.Type == TokenClaims.Role).Select(x => x.Value).ToList();
-        var iat = claims.FirstOrDefault(x => x.Type == TokenClaims.IssuedAt)?.Value;
-        var exp = claims.FirstOrDefault(x => x.Type == TokenClaims.Expiration)?.Value;
-        var iss = claims.FirstOrDefault(x => x.Type == TokenClaims.Issuer)?.Value;
-        var aud = claims.FirstOrDefault(x => x.Type == TokenClaims.Audience)?.Value;
-        var sub = claims.FirstOrDefault(x => x.Type == TokenClaims.Subject)?.Value;
-
-        if (
-            string.IsNullOrWhiteSpace(jti)
-            || string.IsNullOrWhiteSpace(sid)
-            || string.IsNullOrWhiteSpace(nameId)
-            || string.IsNullOrWhiteSpace(name)
-            || string.IsNullOrWhiteSpace(email)
-            || roles.Count == 0
-            || string.IsNullOrWhiteSpace(iat)
-            || string.IsNullOrWhiteSpace(exp)
-            || string.IsNullOrWhiteSpace(iss)
-            || string.IsNullOrWhiteSpace(aud)
-            || string.IsNullOrWhiteSpace(sub)
-            || !nameId.Equals(sub)
-        ) return false;
+        var claimsResult = GetValidatedClaimsFromToken(token);
+        if (!claimsResult.Succeeded) return false;
         
         var validationParameters = new TokenValidationParameters
         {
+            ValidAlgorithms = [SecurityAlgorithms.HmacSha256],
+            
+            RequireExpirationTime = true,
+            RequireSignedTokens = true,
+            
             ValidateIssuerSigningKey = true,
-            IssuerSigningKey = CreateSecurityKey(),
+            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_jwtConfiguration.SecretKey)),
             
             ValidateIssuer = true,
             ValidIssuer = _jwtConfiguration.Issuer,
@@ -105,50 +117,5 @@ public sealed class JwtTokenService(IOptions<JwtConfiguration> jwtConfiguration)
         {
             return false;
         }
-    }
-
-
-    // Helpers
-    private SymmetricSecurityKey CreateSecurityKey()
-    {
-        return new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_jwtConfiguration.SecretKey));
-    }
-
-    private static List<Claim> CreateClaims(string uid, string name, string email, string? sid, IEnumerable<string> roles)
-    {
-        var claims = new List<Claim>
-        {
-            new(TokenClaims.SessionId, sid ?? Guid.NewGuid().ToString("N")),
-            new(TokenClaims.UserId, uid),
-            new(TokenClaims.Name, name),
-            new(TokenClaims.Email, email),
-            
-            new(TokenClaims.Subject, uid),
-            new(TokenClaims.TokenId, Guid.NewGuid().ToString("N")),
-            new(TokenClaims.IssuedAt,
-                DateTimeOffset.UtcNow.ToUnixTimeSeconds().ToString(),
-                ClaimValueTypes.Integer64)
-        };
-
-        claims.AddRange(roles.Select(role => new Claim(TokenClaims.Role, role)));
-
-        return claims;
-    }
-
-    private string GenerateToken(List<Claim> claims, SigningCredentials credentials)
-    {
-        var tokenDescriptor = new SecurityTokenDescriptor
-        {
-            Subject = new ClaimsIdentity(claims),
-            Expires = DateTime.UtcNow.AddMinutes(_jwtConfiguration.ExpirationMinutes),
-            SigningCredentials = credentials,
-            Issuer = _jwtConfiguration.Issuer,
-            Audience = _jwtConfiguration.Audience
-        };
-
-        var tokenHandler = new JwtSecurityTokenHandler();
-        var token = tokenHandler.CreateToken(tokenDescriptor);
-
-        return tokenHandler.WriteToken(token);
     }
 }

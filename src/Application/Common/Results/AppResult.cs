@@ -5,20 +5,24 @@ public class AppResult
     public bool Succeeded { get; protected init; }
     public List<string> Errors { get; protected init; }
 
-    protected AppResult(bool succeeded, List<string> errors)
-    {
-        Succeeded = succeeded;
-        Errors = errors;
-    }
+    protected AppResult() { }
     
     public static AppResult Success()
     {
-        return new AppResult(true, []);
+        return new AppResult
+        {
+            Succeeded = true,
+            Errors = []
+        };
     }
 
     public static AppResult Failure(List<string> errors)
     {
-        return new AppResult(false, errors);
+        return new AppResult
+        {
+            Succeeded = false,
+            Errors = errors
+        };
     }
 }
 
@@ -26,15 +30,24 @@ public class AppResult<T> : AppResult
 {
     public T Data { get; private set; }
 
-    private AppResult(bool succeeded, List<string> errors, T data) : base(succeeded, errors)
-    {
-        Succeeded = succeeded;
-        Errors = errors;
-        Data = data;
-    }
+    private AppResult() { }
 
     public static AppResult<T> Success(T data)
     {
-        return new AppResult<T>(true, [], data);
+        return new AppResult<T>
+        {
+            Succeeded = true,
+            Errors = [],
+            Data = data
+        };
+    }
+    
+    public new static AppResult<T> Failure(List<string> errors)
+    {
+        return new AppResult<T>
+        {
+            Succeeded = false,
+            Errors = errors
+        };
     }
 }
