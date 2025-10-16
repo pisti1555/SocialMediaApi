@@ -1,5 +1,6 @@
-﻿using Infrastructure.Hasher;
-using Microsoft.Extensions.Configuration;
+﻿using Infrastructure.Hasher.Configuration;
+using Infrastructure.Hasher.Services;
+using Microsoft.Extensions.Options;
 
 namespace UnitTests.Infrastructure.Hasher;
 
@@ -11,16 +12,14 @@ public class AppHasherTest
     
     public AppHasherTest()
     {
-        var testConfig = new Dictionary<string, string?>
+        var hasherConfiguration = new HasherConfiguration
         {
-            { "HashKey", "super-secret-key-for-test-hashing" }
+            Hashkey = "TestHashkey"
         };
-            
-        var config = new ConfigurationBuilder()
-            .AddInMemoryCollection(testConfig)
-            .Build();
-
-        _hasher = new AppHasher(config);
+        
+        var options = Options.Create(hasherConfiguration);
+        
+        _hasher = new AppHasher(options);
     }
     
     [Fact]
@@ -61,16 +60,5 @@ public class AppHasherTest
             
         // Assert
         Assert.NotEqual(hash1, hash2);
-    }
-    
-    [Fact]
-    public void CreateHash_WhenHashKeyMissing_ShouldThrowInvalidOperationException()
-    {
-        // Arrange
-        var config = new ConfigurationBuilder().Build();
-        var hasher = new AppHasher(config);
-
-        // Act & Assert
-        Assert.Throws<InvalidOperationException>(() => hasher.CreateHash(Input));
     }
 }

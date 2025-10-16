@@ -1,89 +1,97 @@
 ﻿using Application.Common.Results;
-using Application.Contracts.Auth;
 using Application.Contracts.Services;
-using Domain.Common.Exceptions.CustomExceptions;
 using Domain.Users;
 using Infrastructure.Auth.Exceptions;
 using Infrastructure.Auth.Models;
 using Infrastructure.Persistence.Repositories.Interfaces;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.Extensions.Logging;
 
 namespace Infrastructure.Auth.Services;
 
 public sealed class IdentityService(
-    UserManager<AppIdentityUser> userManager, 
-    ITokenService tokenService,
+    UserManager<AppIdentityUser> userManager,
     IOutsideServicesRepository<Token> tokenRepository,
-    IHasher hasher
+    ILogger<IdentityService> logger
 ) : IAuthService
 {
-    public async Task SaveTokenAsync(
-        string accessToken,
-        string refreshToken,
+    public async Task<AppResult> SaveTokenAsync(
+        string jtiHash,
+        string refreshTokenHash,
+        string sid,
+        string userId,
         bool isLongSession, 
         CancellationToken ct = default
     )
     {
-        var claims = tokenService.GetClaimsFromToken(accessToken);
-        var jti = claims.FirstOrDefault(x => x.Type == TokenClaims.TokenId)?.Value ?? throw new IdentityOperationException("JTI claim not found.");
-        var sid = claims.FirstOrDefault(x => x.Type == TokenClaims.SessionId)?.Value ?? throw new IdentityOperationException("SID claim not found.");
-        var nameId = claims.FirstOrDefault(x => x.Type == TokenClaims.UserId)?.Value ?? throw new IdentityOperationException("User ID claim not found.");
-        
-        var userId = Guid.TryParse(nameId, out var guid) ? guid : throw new IdentityOperationException("Invalid user ID.");
+        if (!Guid.TryParse(userId, out var userGuid))
+        {
+            logger.LogError("Token creation request failed: nameId cannot be parsed to GUID. Provided value: {UserId}", userId);
+            return AppResult.Failure(["Invalid User ID format."]);
+        }
         
         var token = Token.CreateToken(
             sessionId: sid,
-            userId: userId,
-            jtiHash: hasher.CreateHash(jti),
-            refreshTokenHash: hasher.CreateHash(refreshToken),
+            userId: userGuid,
+            jtiHash: jtiHash,
+            refreshTokenHash: refreshTokenHash,
             isLongSession: isLongSession
         );
         
         tokenRepository.Add(token);
         await tokenRepository.SaveChangesAsync(ct);
+        
+        return AppResult.Success();
     }
 
-    public async Task UpdateTokenAsync(
-        string? oldRefreshToken, 
-        string newRefreshToken,
-        string? sid, 
-        string? uid, 
-        string? oldJti,
-        string? newJti,
+    public async Task<AppResult> UpdateTokenAsync(
+        string oldRefreshTokenHash, 
+        string oldJtiHash,
+        string sid, 
+        string uid, 
+        string newRefreshTokenHash,
+        string newJtiHash,
         CancellationToken ct = default
     )
     {
-        if (
-            string.IsNullOrWhiteSpace(oldRefreshToken) 
-            || string.IsNullOrWhiteSpace(sid) 
-            || string.IsNullOrWhiteSpace(uid) 
-            || string.IsNullOrWhiteSpace(oldJti)
-            || string.IsNullOrWhiteSpace(newJti)
-        )
+        var token = await tokenRepository.GetAsync(x => x.Id == sid, ct);
+        if (token is null)
         {
-            throw new UnauthorizedException("Invalid request.");
+            logger.LogWarning("Token not found by Session ID: {SessionId}", sid);
+            return AppResult.Failure(["Invalid credentials."]);
+        }
+
+        if (token.UserId.ToString() != uid || token.JtiHash != oldJtiHash || token.RefreshTokenHash != oldRefreshTokenHash)
+        {
+            logger.LogWarning(
+                "Invalid token refresh attempt. Token has been removed. " +
+                "Provided claims -> UserId: {ProvidedUserId}, JtiHash: {ProvidedJtiHash}, RefreshTokenHash: {ProvidedRefreshTokenHash} " +
+                "Stored token -> UserId: {TokenUserId}, JtiHash: {TokenJtiHash}, RefreshTokenHash: {TokenRefreshTokenHash}.", 
+                uid, oldJtiHash, oldRefreshTokenHash, token.UserId, token.JtiHash, token.RefreshTokenHash
+            );
+            
+            tokenRepository.Delete(token);
+            await tokenRepository.SaveChangesAsync(ct);
+            return AppResult.Failure(["Invalid credentials."]);
         }
         
-        var userId = Guid.TryParse(uid, out var guid) ? guid : throw new UnauthorizedException("Invalid user ID.");
-        var oldJtiHash = hasher.CreateHash(oldJti);
-        var oldRefreshTokenHash = hasher.CreateHash(oldRefreshToken);
-        
-        var token = await tokenRepository.GetAsync(x => 
-            x.Id == sid
-            && x.UserId == userId
-            && x.JtiHash == oldJtiHash
-            && x.RefreshTokenHash == oldRefreshTokenHash,
-            ct
-        );
-        if (token is null || token.IsExpired())
+        var result = token.Refresh(newJtiHash, newRefreshTokenHash);
+        if (!result.Succeeded)
         {
-            throw new UnauthorizedException("Invalid request.");
+            var errorMessage = result.Errors.FirstOrDefault() ?? "Unknown error.";
+            
+            tokenRepository.Delete(token);
+            await tokenRepository.SaveChangesAsync(ct);
+            
+            logger.LogWarning("Token refresh failed. Token removed. Error: {ErrorMessage}", errorMessage);
+            return result;
         }
-        
-        token.Refresh(hasher.CreateHash(newJti), hasher.CreateHash(newRefreshToken));
         
         tokenRepository.Update(token);
         await tokenRepository.SaveChangesAsync(ct);
+        logger.LogInformation("Token refreshed successfully for User: {UserId} with Session: {SessionId}.", uid, sid);
+        
+        return AppResult.Success();
     }
 
     public async Task<bool> CheckPasswordAsync(AppUser user, string password, CancellationToken ct = default)
@@ -94,7 +102,7 @@ public sealed class IdentityService(
             && await userManager.CheckPasswordAsync(identityUser, password);
     }
     
-    public async Task<IdentityUserCreationResult> CreateIdentityUserFromAppUserAsync(AppUser user, string password, CancellationToken ct = default)
+    public async Task<AppResult> CreateIdentityUserAsync(AppUser user, string password, CancellationToken ct = default)
     {
         var identityUser = new AppIdentityUser
         {
@@ -107,16 +115,11 @@ public sealed class IdentityService(
         var creationResult = await userManager.CreateAsync(identityUser, password);
         var roleResult = await userManager.AddToRoleAsync(identityUser, "User");
         
-        var succeeded = creationResult.Succeeded && roleResult.Succeeded;
         var errors = new List<string>();
         errors.AddRange(creationResult.Errors.Select(x => x.Description));
         errors.AddRange(roleResult.Errors.Select(x => x.Description));
-        
-        return new IdentityUserCreationResult
-        {
-            Succeeded = succeeded,
-            Errors = errors
-        };
+
+        return errors.Count > 0 ? AppResult.Failure(errors) : AppResult.Success();
     }
 
     public async Task DeleteIdentityUserAsync(AppUser user)

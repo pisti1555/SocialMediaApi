@@ -1,4 +1,5 @@
-﻿using System.Security.Claims;
+﻿using Application.Common.Adapters.Auth;
+using Application.Common.Results;
 using Application.Contracts.Services;
 using Moq;
 
@@ -27,13 +28,13 @@ public static class TokenServiceMockExtensions
 
     public static void SetupValidateToken(this Mock<ITokenService> tokenServiceMock, bool isValid)
     {
-        tokenServiceMock.Setup(x => x.ValidateToken(It.IsAny<string>(), It.IsAny<List<Claim>>(), false))
+        tokenServiceMock.Setup(x => x.ValidateToken(It.IsAny<string>(), false))
             .Returns(isValid);
     }
 
-    public static void SetupGetClaimsFromToken(this Mock<ITokenService> tokenServiceMock, List<Claim> claims)
+    public static void SetupGetValidatedClaimsFromToken(this Mock<ITokenService> tokenServiceMock, AppResult<AccessTokenClaims?> claims)
     {
-        tokenServiceMock.Setup(x => x.GetClaimsFromToken(It.IsAny<string>()))
+        tokenServiceMock.Setup(x => x.GetValidatedClaimsFromToken(It.IsAny<string>()))
             .Returns(claims);
     }
 }

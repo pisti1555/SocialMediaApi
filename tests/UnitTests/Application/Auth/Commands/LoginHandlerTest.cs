@@ -1,4 +1,6 @@
 ﻿using System.Linq.Expressions;
+using Application.Common.Adapters.Auth;
+using Application.Common.Results;
 using Application.Contracts.Services;
 using Application.Requests.Auth.Commands.Login;
 using Domain.Common.Exceptions.CustomExceptions;
@@ -13,8 +15,11 @@ namespace UnitTests.Application.Auth.Commands;
 public class LoginHandlerTest : BaseUserHandlerTest
 {
     private readonly Mock<ITokenService> _tokenServiceMock = new();
+    private readonly Mock<IHasher> _hasherMock = new();
     
     private readonly LoginHandler _loginHandler;
+
+    private readonly AccessTokenClaims _claims;
 
     public LoginHandlerTest()
     {
@@ -22,12 +27,15 @@ public class LoginHandlerTest : BaseUserHandlerTest
             UserRepositoryMock.Object,
             AuthServiceMock.Object,
             _tokenServiceMock.Object,
+            _hasherMock.Object,
             Mapper
         );
+        
+        _claims = TestDataFactory.CreateAccessTokenClaims();
     }
 
     [Fact]
-    public async Task Handle_WhenValidRequest_ShouldReturnUserDto_WithJwtTokenIncluded()
+    public async Task Handle_WhenValidRequest_ShouldReturnUserDto_WithTokensIncluded()
     {
         // Arrange
         var user = TestDataFactory.CreateUser();
@@ -38,8 +46,11 @@ public class LoginHandlerTest : BaseUserHandlerTest
             .ReturnsAsync(user);
         AuthServiceMock.SetupCheckPasswordAsync(true);
         AuthServiceMock.SetupGetRolesAsync(["User"]);
+        AuthServiceMock.SetupSaveTokenAsync(AppResult.Success());
         _tokenServiceMock.SetupCreateAccessToken();
         _tokenServiceMock.SetupCreateRefreshToken();
+        _tokenServiceMock.SetupGetValidatedClaimsFromToken(AppResult<AccessTokenClaims?>.Success(_claims));
+        _hasherMock.Setup(x => x.CreateHash(It.IsAny<string>())).Returns("hashed-value");
 
         // Act
         var result = await _loginHandler.Handle(command, CancellationToken.None);
@@ -57,9 +68,9 @@ public class LoginHandlerTest : BaseUserHandlerTest
         
         UserRepositoryMock.Verify(x => x.GetEntityAsync(It.IsAny<Expression<Func<AppUser, bool>>>(), It.IsAny<CancellationToken>()), Times.Once);
         AuthServiceMock.Verify(x => x.CheckPasswordAsync(user, It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Once);
-        AuthServiceMock.Verify(x => x.GetRolesAsync(user, It.IsAny<CancellationToken>()), Times.Once);
         _tokenServiceMock.Verify(x => x.CreateAccessToken(user.Id.ToString(), user.UserName, user.Email, new[]{"User"}, null), Times.Once);
         _tokenServiceMock.Verify(x => x.CreateRefreshToken(), Times.Once);
+        AuthServiceMock.Verify(x => x.SaveTokenAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>(), It.IsAny<CancellationToken>()), Times.Once);
     }
     
     [Fact]
@@ -72,8 +83,11 @@ public class LoginHandlerTest : BaseUserHandlerTest
             .ReturnsAsync((AppUser?)null);
         AuthServiceMock.SetupCheckPasswordAsync(true);
         AuthServiceMock.SetupGetRolesAsync(["User"]);
+        AuthServiceMock.SetupSaveTokenAsync(AppResult.Success());
         _tokenServiceMock.SetupCreateAccessToken();
         _tokenServiceMock.SetupCreateRefreshToken();
+        _tokenServiceMock.SetupGetValidatedClaimsFromToken(AppResult<AccessTokenClaims?>.Success(_claims));
+        _hasherMock.Setup(x => x.CreateHash(It.IsAny<string>())).Returns("hashed-value");
 
         // Act
         await Assert.ThrowsAsync<UnauthorizedException>(() => _loginHandler.Handle(command, CancellationToken.None));
@@ -81,7 +95,7 @@ public class LoginHandlerTest : BaseUserHandlerTest
         // Assert
         UserRepositoryMock.Verify(x => x.GetEntityAsync(It.IsAny<Expression<Func<AppUser, bool>>>(), It.IsAny<CancellationToken>()), Times.Once);
         AuthServiceMock.Verify(x => x.CheckPasswordAsync(It.IsAny<AppUser>(), It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
-        AuthServiceMock.Verify(x => x.GetRolesAsync(It.IsAny<AppUser>(), It.IsAny<CancellationToken>()), Times.Never);
+        AuthServiceMock.Verify(x => x.SaveTokenAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>(), It.IsAny<CancellationToken>()), Times.Never);
         _tokenServiceMock.Verify(x => x.CreateAccessToken(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<IEnumerable<string>>(), It.IsAny<string>()), Times.Never);
         _tokenServiceMock.Verify(x => x.CreateRefreshToken(), Times.Never);
     }
@@ -97,8 +111,11 @@ public class LoginHandlerTest : BaseUserHandlerTest
             .ReturnsAsync(user);
         AuthServiceMock.SetupCheckPasswordAsync(false);
         AuthServiceMock.SetupGetRolesAsync(["User"]);
+        AuthServiceMock.SetupSaveTokenAsync(AppResult.Success());
         _tokenServiceMock.SetupCreateAccessToken();
         _tokenServiceMock.SetupCreateRefreshToken();
+        _tokenServiceMock.SetupGetValidatedClaimsFromToken(AppResult<AccessTokenClaims?>.Success(_claims));
+        _hasherMock.Setup(x => x.CreateHash(It.IsAny<string>())).Returns("hashed-value");
 
         // Act
         await Assert.ThrowsAsync<UnauthorizedException>(() => _loginHandler.Handle(command, CancellationToken.None));
@@ -106,7 +123,7 @@ public class LoginHandlerTest : BaseUserHandlerTest
         // Assert
         UserRepositoryMock.Verify(x => x.GetEntityAsync(It.IsAny<Expression<Func<AppUser, bool>>>(), It.IsAny<CancellationToken>()), Times.Once);
         AuthServiceMock.Verify(x => x.CheckPasswordAsync(It.IsAny<AppUser>(), It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Once);
-        AuthServiceMock.Verify(x => x.GetRolesAsync(It.IsAny<AppUser>(), It.IsAny<CancellationToken>()), Times.Never);
+        AuthServiceMock.Verify(x => x.SaveTokenAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>(), It.IsAny<CancellationToken>()), Times.Never);
         _tokenServiceMock.Verify(x => x.CreateAccessToken(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<IEnumerable<string>>(), It.IsAny<string>()), Times.Never);
         _tokenServiceMock.Verify(x => x.CreateRefreshToken(), Times.Never);
     }

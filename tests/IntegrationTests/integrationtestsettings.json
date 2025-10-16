@@ -8,5 +8,7 @@
     "Issuer": "TestIssuer",
     "Audience": "TestAudience"
   },
-  "HashKey": "super_secret_key_for_test_hashing"
+  "Hasher": {
+    "Hashkey": "super_secret_key_for_test_hashing"
+  }
 }

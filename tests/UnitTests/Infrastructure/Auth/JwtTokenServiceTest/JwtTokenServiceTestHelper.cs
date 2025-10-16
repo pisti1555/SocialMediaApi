@@ -11,6 +11,7 @@ internal static class JwtTokenServiceTestHelper
 {
     internal static List<Claim> CreateValidClaims(string uid, string? sub = null)
     {
+        var now = DateTimeOffset.UtcNow;
         return
         [
             new Claim(TokenClaims.TokenId, Guid.NewGuid().ToString("N")),
@@ -19,29 +20,31 @@ internal static class JwtTokenServiceTestHelper
             new Claim(TokenClaims.Name, "test-user"),
             new Claim(TokenClaims.Email, "test@example.com"),
             new Claim(TokenClaims.Role, "User"),
-            new Claim(TokenClaims.IssuedAt, DateTimeOffset.UtcNow.ToUnixTimeSeconds().ToString(), ClaimValueTypes.Integer64),
-            new Claim(TokenClaims.Expiration, DateTimeOffset.UtcNow.AddMinutes(5).ToUnixTimeSeconds().ToString(), ClaimValueTypes.Integer64),
+            new Claim(TokenClaims.Role, "Admin"),
+            new Claim(TokenClaims.IssuedAt, now.ToUnixTimeSeconds().ToString(), ClaimValueTypes.Integer64),
+            new Claim(TokenClaims.Expiration, now.AddMinutes(15).ToUnixTimeSeconds().ToString(), ClaimValueTypes.Integer64),
             new Claim(TokenClaims.Issuer, "TestIssuer"),
             new Claim(TokenClaims.Audience, "TestAudience"),
-            new Claim(TokenClaims.Subject, sub ?? uid)
+            new Claim(TokenClaims.Subject, sub ?? uid),
+            new Claim(TokenClaims.NotBefore, now.ToUnixTimeSeconds().ToString(), ClaimValueTypes.Integer64),
         ];
     }
     
     internal static string GenerateJwt(JwtConfiguration config, List<Claim> claims, DateTime? expires = null)
     {
         var now = DateTime.UtcNow;
-        var expiration = expires ?? now.AddMinutes(5);
+        var expiration = expires ?? now.AddMinutes(15);
         
         var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(config.SecretKey));
         var credentials = new SigningCredentials(key, SecurityAlgorithms.HmacSha256Signature);
         var tokenDescriptor = new SecurityTokenDescriptor
         {
+            Issuer = config.Issuer,
+            Audience = config.Audience,
             Subject = new ClaimsIdentity(claims),
             NotBefore = now.AddMinutes(-10),
             Expires = expiration,
-            SigningCredentials = credentials,
-            Issuer = config.Issuer,
-            Audience = config.Audience
+            SigningCredentials = credentials
         };
 
         var handler = new JwtSecurityTokenHandler();

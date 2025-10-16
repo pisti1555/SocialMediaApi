@@ -1,4 +1,4 @@
-﻿using Domain.Common.Exceptions.CustomExceptions;
+﻿using Application.Common.Results;
 
 namespace Infrastructure.Auth.Models;
 
@@ -48,13 +48,13 @@ public class Token
         return token;
     }
 
-    public void Refresh(string jtiHash, string refreshTokenHash)
+    public AppResult Refresh(string jtiHash, string refreshTokenHash)
     {
         var utcNow = DateTime.UtcNow;
 
-        if (utcNow >= ExpiresAt || utcNow >= MaxExpiry)
+        if (IsExpired())
         {
-            throw new UnauthorizedException("Token is expired.");
+            return AppResult.Failure(["The token is expired."]);
         }
 
         JtiHash = jtiHash;
@@ -64,6 +64,8 @@ public class Token
 
         ExpiresAt = nextExpiry >= MaxExpiry ? MaxExpiry : nextExpiry;
         LastSeenAt = utcNow;
+        
+        return AppResult<Token>.Success(this);
     }
 
     public bool IsExpired() 

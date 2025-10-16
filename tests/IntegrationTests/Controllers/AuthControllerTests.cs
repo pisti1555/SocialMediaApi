@@ -173,8 +173,8 @@ public class AuthControllerTests(CustomWebApplicationFactoryFixture factory, ITe
         Assert.NotNull(refreshResult);
         Assert.False(string.IsNullOrWhiteSpace(refreshResult.AccessToken));
         Assert.False(string.IsNullOrWhiteSpace(refreshResult.RefreshToken));
-        Assert.NotEqual(registrationResult?.AccessToken, refreshResult?.AccessToken);
-        Assert.NotEqual(registrationResult?.RefreshToken, refreshResult?.RefreshToken);
+        Assert.NotEqual(registrationResult?.AccessToken, refreshResult.AccessToken);
+        Assert.NotEqual(registrationResult?.RefreshToken, refreshResult.RefreshToken);
     }
     
     public async Task InitializeAsync()
