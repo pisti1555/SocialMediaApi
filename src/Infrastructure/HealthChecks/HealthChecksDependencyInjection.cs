@@ -15,9 +15,9 @@ internal static class HealthChecksDependencyInjection
                     ?? throw new InvalidOperationException("Missing 'Redis' connection string.");
         
         services.AddHealthChecks()
-            .AddNpgSql(appDb, name: "AppDb")
-            .AddNpgSql(identityDb, name: "IdentityDb")
-            .AddRedis(redis, name: "Redis");
+            .AddNpgSql(appDb, name: "App database")
+            .AddNpgSql(identityDb, name: "Identity database")
+            .AddRedis(redis, name: "Redis cache");
 
         return services;
     }
