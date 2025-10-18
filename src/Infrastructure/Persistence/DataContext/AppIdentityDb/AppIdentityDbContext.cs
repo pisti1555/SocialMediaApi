@@ -2,7 +2,7 @@
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 
-namespace Infrastructure.Persistence.DataContext;
+namespace Infrastructure.Persistence.DataContext.AppIdentityDb;
 
 public class AppIdentityDbContext(DbContextOptions<AppIdentityDbContext> options)
     : IdentityDbContext<AppIdentityUser, AppIdentityRole, Guid>(options)

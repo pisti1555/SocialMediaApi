@@ -1,7 +1,8 @@
 ﻿using Application.Contracts.Services;
 using Domain.Users;
 using Infrastructure.Auth.Models;
-using Infrastructure.Persistence.DataContext;
+using Infrastructure.Persistence.DataContext.AppDb;
+using Infrastructure.Persistence.DataContext.AppIdentityDb;
 using IntegrationTests.Fixtures;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;

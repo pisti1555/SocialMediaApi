@@ -2,11 +2,11 @@
 using Microsoft.EntityFrameworkCore.Design;
 using Microsoft.Extensions.Configuration;
 
-namespace Infrastructure.Persistence.DataContext;
+namespace Infrastructure.Persistence.DataContext.AppIdentityDb;
 
-public class AppDbContextFactory : IDesignTimeDbContextFactory<AppDbContext>
+public class AppIdentityDbContextFactory : IDesignTimeDbContextFactory<AppIdentityDbContext>
 {
-    public AppDbContext CreateDbContext(string[] args)
+    public AppIdentityDbContext CreateDbContext(string[] args)
     {
         var config = new ConfigurationBuilder()
             .SetBasePath(Path.Combine(Directory.GetCurrentDirectory(), "../API"))
@@ -14,11 +14,11 @@ public class AppDbContextFactory : IDesignTimeDbContextFactory<AppDbContext>
             .AddJsonFile("appsettings.Development.json", optional: true)
             .Build();
         
-        var connectionString = config.GetConnectionString("Database");
+        var connectionString = config.GetConnectionString("IdentityDatabase");
         
-        var optionsBuilder = new DbContextOptionsBuilder<AppDbContext>();
+        var optionsBuilder = new DbContextOptionsBuilder<AppIdentityDbContext>();
         optionsBuilder.UseNpgsql(connectionString);
 
-        return new AppDbContext(optionsBuilder.Options);
+        return new AppIdentityDbContext(optionsBuilder.Options);
     }
 }

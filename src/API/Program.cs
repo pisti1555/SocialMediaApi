@@ -1,11 +1,13 @@
 using API;
 using API.Middlewares;
 using Application;
+using HealthChecks.UI.Client;
 using Infrastructure;
 using Infrastructure.Auth.Exceptions;
 using Infrastructure.Auth.Models;
-using Infrastructure.Persistence;
-using Infrastructure.Persistence.DataContext;
+using Infrastructure.Persistence.DataContext.AppDb;
+using Infrastructure.Persistence.DataContext.AppIdentityDb;
+using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
@@ -24,7 +26,6 @@ builder.Host.UseSerilog((context, config) =>
 // Add layers to the program
 builder.Services.AddApplication(builder.Configuration);
 builder.Services.AddInfrastructure(builder.Configuration);
-builder.Services.AddPersistence(builder.Configuration);
 builder.Services.AddApi();
 
 
@@ -54,6 +55,10 @@ app.MapScalarApiReference("/scalar", (options, context) =>
     
     options.Title = "Social Media API";
     options.BaseServerUrl = $"{context.Request.Scheme}://{context.Request.Host.Value}";
+});
+app.MapHealthChecks("/health", new HealthCheckOptions
+{
+    ResponseWriter = UIResponseWriter.WriteHealthCheckUIResponse
 });
 
 // Migrate database and create roles

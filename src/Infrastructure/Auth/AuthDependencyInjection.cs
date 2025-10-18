@@ -3,7 +3,7 @@ using Application.Contracts.Services;
 using Infrastructure.Auth.Configuration;
 using Infrastructure.Auth.Models;
 using Infrastructure.Auth.Services;
-using Infrastructure.Persistence.DataContext;
+using Infrastructure.Persistence.DataContext.AppIdentityDb;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Configuration;

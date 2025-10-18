@@ -4,7 +4,7 @@ using Application.Contracts.Persistence.Repositories;
 using AutoMapper;
 using AutoMapper.QueryableExtensions;
 using Domain.Common;
-using Infrastructure.Persistence.DataContext;
+using Infrastructure.Persistence.DataContext.AppDb;
 using Microsoft.EntityFrameworkCore;
 
 namespace Infrastructure.Persistence.Repositories;
