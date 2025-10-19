@@ -2,7 +2,7 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
-namespace Infrastructure.Persistence.DataContext.EntityConfigurations.Posts;
+namespace Infrastructure.Persistence.DataContext.AppDb.EntityConfigurations.Posts;
 
 public class PostLikeEntityConfiguration : IEntityTypeConfiguration<PostLike>
 {

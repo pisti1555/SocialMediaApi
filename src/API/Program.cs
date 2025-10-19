@@ -1,11 +1,14 @@
 using API;
 using API.Middlewares;
 using Application;
+using Domain.Users.Factories;
+using HealthChecks.UI.Client;
 using Infrastructure;
 using Infrastructure.Auth.Exceptions;
 using Infrastructure.Auth.Models;
-using Infrastructure.Persistence;
-using Infrastructure.Persistence.DataContext;
+using Infrastructure.Persistence.DataContext.AppDb;
+using Infrastructure.Persistence.DataContext.AppIdentityDb;
+using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
@@ -24,7 +27,6 @@ builder.Host.UseSerilog((context, config) =>
 // Add layers to the program
 builder.Services.AddApplication(builder.Configuration);
 builder.Services.AddInfrastructure(builder.Configuration);
-builder.Services.AddPersistence(builder.Configuration);
 builder.Services.AddApi();
 
 
@@ -55,6 +57,13 @@ app.MapScalarApiReference("/scalar", (options, context) =>
     options.Title = "Social Media API";
     options.BaseServerUrl = $"{context.Request.Scheme}://{context.Request.Host.Value}";
 });
+app.MapHealthChecks("/health", new HealthCheckOptions
+{
+    ResponseWriter = UIResponseWriter.WriteHealthCheckUIResponse
+}).RequireAuthorization(opt =>
+{
+    opt.RequireRole("Admin");
+});
 
 // Migrate database and create roles
 using (var scope = app.Services.CreateScope())
@@ -63,6 +72,7 @@ using (var scope = app.Services.CreateScope())
     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
     var identityDb = scope.ServiceProvider.GetRequiredService<AppIdentityDbContext>();
     var roleManager = scope.ServiceProvider.GetRequiredService<RoleManager<AppIdentityRole>>();
+    var userManager = scope.ServiceProvider.GetRequiredService<UserManager<AppIdentityUser>>();
     
     db.Database.Migrate();
     logger.LogInformation("Migrated database successfully.");
@@ -88,6 +98,42 @@ using (var scope = app.Services.CreateScope())
             throw new IdentityOperationException("Failed to create roles on application startup.");
         }
         logger.LogInformation("Role {RoleName} created successfully.", r.Name);
+    }
+    
+    var existingAdminAppDb = await db.Users.FirstOrDefaultAsync(u => u.UserName == "admin");
+    if (existingAdminAppDb is null)
+    {
+        var adminAppDb = AppUserFactory.Create(
+            "admin", "admin@admin.com", "Admin", "Admin", DateOnly.Parse("2000-01-01"), true
+        );
+        db.Users.Add(adminAppDb);
+        await db.SaveChangesAsync();
+        logger.LogInformation("Admin user created in AppDb.");
+    }
+    else
+    {
+        logger.LogInformation("Admin user already exists in AppDb, skipped.");
+    }
+    
+    var existingAdminIdentityDb = await userManager.FindByNameAsync("admin");
+    if (existingAdminIdentityDb is null)
+    {
+        var adminIdentityDb = new AppIdentityUser
+        {
+            Id = existingAdminAppDb?.Id ?? Guid.NewGuid(),
+            UserName = "admin",
+            Email = "admin@admin.com",
+            EmailConfirmed = true,
+            SecurityStamp = Guid.NewGuid().ToString()
+        };
+        await userManager.CreateAsync(adminIdentityDb, "Admin-123");
+        await userManager.AddToRoleAsync(adminIdentityDb, "Admin");
+        await userManager.AddToRoleAsync(adminIdentityDb, "User");
+        logger.LogInformation("Admin user created in IdentityDb.");
+    }
+    else
+    {
+        logger.LogInformation("Admin user already exists in IdentityDb, skipped.");
     }
 }
 

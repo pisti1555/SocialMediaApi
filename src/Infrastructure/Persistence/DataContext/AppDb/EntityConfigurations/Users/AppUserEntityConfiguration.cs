@@ -2,7 +2,7 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
-namespace Infrastructure.Persistence.DataContext.EntityConfigurations.Users;
+namespace Infrastructure.Persistence.DataContext.AppDb.EntityConfigurations.Users;
 
 public class AppUserEntityConfiguration : IEntityTypeConfiguration<AppUser>
 {

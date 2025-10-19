@@ -2,7 +2,8 @@
 using Application.Contracts.Persistence.Cortex.Mediator;
 using Application.Contracts.Persistence.Repositories;
 using Infrastructure.Persistence.Cortex.Mediator;
-using Infrastructure.Persistence.DataContext;
+using Infrastructure.Persistence.DataContext.AppDb;
+using Infrastructure.Persistence.DataContext.AppIdentityDb;
 using Infrastructure.Persistence.Repositories;
 using Infrastructure.Persistence.Repositories.Interfaces;
 using Microsoft.EntityFrameworkCore;
@@ -11,9 +12,9 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace Infrastructure.Persistence;
 
-public static class PersistenceDependencyInjection
+internal static class PersistenceDependencyInjection
 {
-    public static IServiceCollection AddPersistence(this IServiceCollection services, IConfiguration config)
+    internal static IServiceCollection SetupPersistence(this IServiceCollection services, IConfiguration config)
     {
         services.AddDbContext<AppDbContext>(opt =>
         {

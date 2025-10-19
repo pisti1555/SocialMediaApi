@@ -1,6 +1,6 @@
 ﻿using Application.Contracts.Persistence.Cortex.Mediator;
 using Cortex.Mediator.Infrastructure;
-using Infrastructure.Persistence.DataContext;
+using Infrastructure.Persistence.DataContext.AppDb;
 using Microsoft.EntityFrameworkCore.Storage;
 
 namespace Infrastructure.Persistence.Cortex.Mediator;

@@ -2,7 +2,7 @@
 using Domain.Users;
 using Microsoft.EntityFrameworkCore;
 
-namespace Infrastructure.Persistence.DataContext;
+namespace Infrastructure.Persistence.DataContext.AppDb;
 
 public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(options)
 {

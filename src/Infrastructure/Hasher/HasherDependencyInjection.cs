@@ -5,9 +5,9 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace Infrastructure.Hasher;
 
-public static class HasherDependencyInjection
+internal static class HasherDependencyInjection
 {
-    public static IServiceCollection SetupHasher(this IServiceCollection services)
+    internal static IServiceCollection SetupHasher(this IServiceCollection services)
     {
         services.AddOptions<HasherConfiguration>()
             .BindConfiguration("Hasher")
