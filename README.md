@@ -20,9 +20,12 @@ The API serves as the backend for a social media platform, which I plan to integ
 - Nginx as proxy server
 
 ## Features by routes
-### Users
+### Auth
 - Register
 - Login
+- Refresh access
+
+### Users
 - Get by ID
 - Get all (paged)
 
@@ -53,10 +56,14 @@ The API is versioned. You must specify the version in the URL (example: /api/v1/
 ### Authentication
 The API uses JWT authentication. 
 - Tokens are generated on login, register and refresh-token endpoints and must be passed in the Authorization header.
-- The token is valid for 5 minutes. 
-- The refresh token expiration depends on the RememberMe field in the login request. If remembered, the expiration time is 14 days, otherwise it is 12 hours.
+- The token is valid for 15 minutes. 
+- The refresh token expiration depends on the RememberMe field in the login request.
+    - If RememberMe is true, the expiration time is 14 days.
+    - If RememberMe is false, the expiration time is 12 hours.
 - The expiration time is a sliding window, so after refreshing, it is valid for another 14 days or 12 hours, until it reaches the maximum expiration time, which is 90 days.
-- Token can be refreshed by sending a POST request to /api/v1/auth/refresh-token. Then a new set of tokens is returned.
+- Token can be refreshed by sending a POST request to /api/v1/auth/refresh-token. Then a new set of tokens is returned (access and refresh).
+- If the JWT or Refresh token is invalid for some reason (ex. an older jwt has been sent with the correct refresh token or some claims are invalid or missing),
+  then the Token gets invalidated and deleted, so the user must login again.
 - GET endpoints do not require authentication, but POST, PUT, PATCH and DELETE do.
 
 ### Pagination
