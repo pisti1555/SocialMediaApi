@@ -1,6 +1,8 @@
 ﻿{
   "ConnectionStrings": {
-    "Redis": "Test connection string to make Caching DI not throw an exception. Will be overridden by the test container."
+    "Database": "Test connection string to make HealthCheck DI not throw an exception. Will be overridden by the test container.",
+    "IdentityDatabase": "Test connection string to make HealthCheck DI not throw an exception. Will be overridden by the test container.",
+    "Redis": "Test connection string to make HealthCheck and Caching DI not throw an exception. Will be overridden by the test container."
   },
   "Jwt": {
     "SecretKey": "this_is_a_test_jwt_secret_key_which_must_be_64_characters_long_but_i_think_it_is_ok_now",
