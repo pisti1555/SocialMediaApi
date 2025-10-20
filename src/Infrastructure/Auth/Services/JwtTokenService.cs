@@ -6,8 +6,8 @@ using Application.Common.Adapters.Auth;
 using Application.Common.Results;
 using Application.Contracts.Auth;
 using Application.Contracts.Services;
+using Domain.Common.Exceptions.CustomExceptions;
 using Infrastructure.Auth.Configuration;
-using Infrastructure.Auth.Exceptions;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 
@@ -17,13 +17,8 @@ public sealed class JwtTokenService(IOptions<JwtConfiguration> jwtConfiguration)
 {
     private readonly JwtConfiguration _jwtConfiguration = jwtConfiguration.Value;
 
-    public string CreateAccessToken(string? uid, string? name, string? email, IEnumerable<string> roles, string? sid)
+    public string CreateAccessToken(string uid, string name, string email, IEnumerable<string> roles, string? sid)
     {
-        if (string.IsNullOrWhiteSpace(uid) || string.IsNullOrWhiteSpace(name) || string.IsNullOrWhiteSpace(email))
-        {
-            throw new JwtException("Credentials are missing.");
-        }
-        
         var claims = new List<Claim>
         {
             new(TokenClaims.SessionId, sid ?? Guid.NewGuid().ToString("N")),
@@ -75,7 +70,12 @@ public sealed class JwtTokenService(IOptions<JwtConfiguration> jwtConfiguration)
     public AppResult<AccessTokenClaims?> GetValidatedClaimsFromToken(string token)
     {
         var tokenHandler = new JwtSecurityTokenHandler();
-        var jwtSecurityToken = tokenHandler.ReadJwtToken(token) ?? throw new JwtException("Invalid token.");
+        var jwtSecurityToken = tokenHandler.ReadJwtToken(token);
+        if (jwtSecurityToken is null)
+        {
+            return AppResult<AccessTokenClaims?>.Failure(["Invalid token."]);
+        }
+        
         var claims = jwtSecurityToken.Claims.ToList();
         
         return AccessTokenClaims.Create(claims);
