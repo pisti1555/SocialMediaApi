@@ -1,5 +1,6 @@
 ﻿using Application.Contracts.Services;
 using Infrastructure.Caching.Services;
+using Infrastructure.Common.Exceptions;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -12,7 +13,7 @@ internal static class CachingDependencyInjection
         var connectionString = config.GetConnectionString("Redis");
         if (string.IsNullOrWhiteSpace(connectionString))
         {
-            throw new InvalidOperationException("Redis connection string is missing.");
+            throw new ConfigurationException("Redis connection string is missing.");
         }
         
         services.AddStackExchangeRedisCache(options =>

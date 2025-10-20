@@ -16,6 +16,8 @@ internal static class PersistenceDependencyInjection
 {
     internal static IServiceCollection SetupPersistence(this IServiceCollection services, IConfiguration config)
     {
+        
+        
         services.AddDbContext<AppDbContext>(opt =>
         {
             opt.UseNpgsql(config.GetConnectionString("Database"));
@@ -25,8 +27,8 @@ internal static class PersistenceDependencyInjection
             opt.UseNpgsql(config.GetConnectionString("IdentityDatabase"));
         });
         
-        services.AddScoped<IDbConnection>(sp => 
-            sp.GetRequiredService<AppDbContext>().Database.GetDbConnection()
+        services.AddScoped<IDbConnection>(x => 
+            x.GetRequiredService<AppDbContext>().Database.GetDbConnection()
         );
 
         services.AddScoped<ICustomUnitOfWork, CustomUnitOfWork>();

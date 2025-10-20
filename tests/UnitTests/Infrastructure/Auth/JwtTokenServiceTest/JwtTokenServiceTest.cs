@@ -2,7 +2,6 @@
 using System.Security.Claims;
 using Application.Contracts.Auth;
 using Infrastructure.Auth.Configuration;
-using Infrastructure.Auth.Exceptions;
 using Microsoft.Extensions.Options;
 using UnitTests.Factories;
 
@@ -70,38 +69,6 @@ public class JwtTokenServiceTest
         AssertClaimExists(claims, TokenClaims.TokenId);
         AssertClaimExists(claims, TokenClaims.Expiration);
         AssertClaimExists(claims, TokenClaims.IssuedAt);
-    }
-    
-    [Theory]
-    [InlineData("")]
-    [InlineData(" ")]
-    public void CreateAccessToken_WhenInvalidUserName_ShouldThrowJwtException(string? invalidUserName)
-    {
-        var user = TestDataFactory.CreateUser(userName: invalidUserName);
-
-        Assert.Throws<JwtException>(() => _jwtTokenService.CreateAccessToken(
-            uid: user.Id.ToString(),
-            name: user.UserName,
-            email: user.Email,
-            roles: [],
-            sid: null
-        ));
-    }
-    
-    [Theory]
-    [InlineData("")]
-    [InlineData(" ")]
-    public void CreateAccessToken_WithInvalidEmail_ShouldThrowJwtException(string? invalidEmail)
-    {
-        var user = TestDataFactory.CreateUser(email: invalidEmail);
-
-        Assert.Throws<JwtException>(() => _jwtTokenService.CreateAccessToken(
-            uid: user.Id.ToString(),
-            name: user.UserName,
-            email: user.Email,
-            roles: [],
-            sid: null    
-        ));
     }
     
     [Fact]

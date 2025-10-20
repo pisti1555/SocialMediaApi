@@ -1,8 +1,8 @@
 ﻿using Application.Common.Results;
 using Application.Contracts.Services;
 using Domain.Users;
-using Infrastructure.Auth.Exceptions;
 using Infrastructure.Auth.Models;
+using Infrastructure.Common.Exceptions;
 using Infrastructure.Persistence.Repositories.Interfaces;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Logging;

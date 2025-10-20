@@ -1,5 +1,5 @@
 ﻿using Domain.Common.Exceptions;
-using Infrastructure.Auth.Exceptions;
+using Infrastructure.Common.Exceptions;
 using Microsoft.AspNetCore.Http.Features;
 using Microsoft.AspNetCore.Mvc;
 using ValidationException = FluentValidation.ValidationException;
@@ -34,8 +34,6 @@ public class ErrorHandlerMiddleware(
 
             AddProblemDetailsExtensions(problemDetails, context, e, env.IsDevelopment());
 
-            logger.LogError(e, "Unhandled exception occurred");
-
             response.StatusCode = problemDetails.Status ?? StatusCodes.Status500InternalServerError;
 
             await response.WriteAsJsonAsync(problemDetails);
@@ -67,46 +65,23 @@ public class ErrorHandlerMiddleware(
 
             await response.WriteAsJsonAsync(validationProblemDetails);
         }
-        catch (JwtException e)
+        catch (InternalException e)
         {
             var problemDetails = new ProblemDetails
             {
                 Type = env.IsDevelopment()
                     ? e.GetType().Name
                     : $"https://httpstatuses.com/{StatusCodes.Status500InternalServerError}",
-                Status = StatusCodes.Status500InternalServerError,
-                Title = env.IsDevelopment() ? "Jwt token service error." : "Unexpected error occurred.",
+                Status = e.Status,
+                Title = env.IsDevelopment() ? e.Title : "Unexpected error.",
                 Detail = env.IsDevelopment()
-                    ? e.Message
-                    : "An unexpected error occurred on server side.",
-                Instance = $"{context.Request.Method} {context.Request.Path}",
-            };
-
-            AddProblemDetailsExtensions(problemDetails, context, e, env.IsDevelopment());
-
-            logger.LogCritical(e, "Jwt token service error.");
-
-            response.StatusCode = problemDetails.Status ?? StatusCodes.Status500InternalServerError;
-
-            await context.Response.WriteAsJsonAsync(problemDetails);
-        }
-        catch (IdentityOperationException e)
-        {
-            var problemDetails = new ProblemDetails
-            {
-                Type = env.IsDevelopment()
-                    ? e.GetType().Name
-                    : $"https://httpstatuses.com/{StatusCodes.Status500InternalServerError}",
-                Status = StatusCodes.Status500InternalServerError,
-                Title = env.IsDevelopment() ? "Identity operation error." : "Unexpected error occurred.",
-                Detail = env.IsDevelopment()
-                    ? e.Message
+                    ? e.ErrorMessage
                     : "An unexpected error occurred on server side.",
             };
             
             AddProblemDetailsExtensions(problemDetails, context, e, env.IsDevelopment());
             
-            logger.LogCritical(e, "Identity operation error.");
+            logger.LogError(e, "{CustomErrorMessage}", e.ErrorMessage);
             
             response.StatusCode = problemDetails.Status ?? StatusCodes.Status500InternalServerError;
             
