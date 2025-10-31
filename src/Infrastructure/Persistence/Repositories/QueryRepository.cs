@@ -9,45 +9,8 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Infrastructure.Persistence.Repositories;
 
-public class Repository<TEntity, TDto>(AppDbContext context, IMapper mapper) : IRepository<TEntity, TDto> where TEntity : EntityBase
+public class QueryRepository<TEntity, TDto>(AppDbContext context, IMapper mapper) : IRepository<TEntity, TDto> where TEntity : EntityBase
 {
-    public async Task<bool> SaveChangesAsync(CancellationToken ct = default)
-    {
-        return await context.SaveChangesAsync(ct) > 0;
-    }
-
-    public bool HasChanges()
-    {
-        return context.ChangeTracker.HasChanges();
-    }
-    
-    public void Add(TEntity entity)
-    {
-        context.Set<TEntity>().Add(entity);
-    }
-
-    public void Update(TEntity entity)
-    {
-        context.Set<TEntity>().Update(entity);
-    }
-
-    public void Delete(TEntity entity)
-    {
-        context.Set<TEntity>().Remove(entity);
-    }
-    
-    public async Task<TEntity?> GetEntityByIdAsync(Guid id)
-    {
-        return await context.Set<TEntity>().FindAsync(id);
-    }
-
-    public async Task<TEntity?> GetEntityAsync(Expression<Func<TEntity, bool>> expression, CancellationToken ct = default)
-    {
-        return await context.Set<TEntity>()
-            .Where(expression)
-            .FirstOrDefaultAsync(ct);
-    }
-
     public async Task<TDto?> GetByIdAsync(Guid id, CancellationToken ct = default)
     {
         return await context.Set<TEntity>()

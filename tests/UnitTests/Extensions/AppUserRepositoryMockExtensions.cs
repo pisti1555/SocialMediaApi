@@ -10,12 +10,15 @@ namespace UnitTests.Extensions;
 
 public static class AppUserRepositoryMockExtensions
 {
-    public static void SetupUser(this Mock<IRepository<AppUser, UserResponseDto>> userRepositoryMock, AppUser? user, IMapper mapper)
+    public static void SetupUser(this Mock<IRepository<AppUser>> userRepositoryMock, AppUser? user)
     {
         userRepositoryMock
-            .Setup(x => x.GetEntityByIdAsync(It.Is<Guid>(id => user != null && id == user.Id)))
+            .Setup(x => x.GetByIdAsync(It.Is<Guid>(id => user != null && id == user.Id), It.IsAny<CancellationToken>()))
             .ReturnsAsync(user);
-        
+    }
+    
+    public static void SetupUser(this Mock<IRepository<AppUser, UserResponseDto>> userRepositoryMock, AppUser? user, IMapper mapper)
+    {
         userRepositoryMock
             .Setup(x => x.GetByIdAsync(It.Is<Guid>(id => user != null && id == user.Id), It.IsAny<CancellationToken>()))
             .ReturnsAsync(user is not null ? mapper.Map<UserResponseDto>(user) : null);
@@ -32,10 +35,24 @@ public static class AppUserRepositoryMockExtensions
             .ReturnsAsync(users);
     }
     
+    public static void SetupUserExists(this Mock<IRepository<AppUser>> userRepositoryMock, Guid userId, bool exists)
+    {
+        userRepositoryMock
+            .Setup(x => x.ExistsAsync(userId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(exists);
+    }
+    
     public static void SetupUserExists(this Mock<IRepository<AppUser, UserResponseDto>> userRepositoryMock, Guid userId, bool exists)
     {
         userRepositoryMock
             .Setup(x => x.ExistsAsync(userId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(exists);
+    }
+    
+    public static void SetupUserExistsByAnyFilters(this Mock<IRepository<AppUser>> userRepositoryMock, bool exists)
+    {
+        userRepositoryMock
+            .Setup(x => x.ExistsAsync(It.IsAny<Expression<Func<AppUser, bool>>>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(exists);
     }
     
@@ -46,7 +63,7 @@ public static class AppUserRepositoryMockExtensions
             .ReturnsAsync(exists);
     }
     
-    public static void SetupSaveChanges(this Mock<IRepository<AppUser, UserResponseDto>> userRepositoryMock, bool success = true)
+    public static void SetupSaveChanges(this Mock<IRepository<AppUser>> userRepositoryMock, bool success = true)
     {
         userRepositoryMock.Setup(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(success);

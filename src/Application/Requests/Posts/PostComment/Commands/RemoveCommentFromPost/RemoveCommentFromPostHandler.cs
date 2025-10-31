@@ -1,7 +1,6 @@
 ﻿using Application.Common.Helpers;
 using Application.Contracts.Persistence.Repositories;
 using Application.Contracts.Services;
-using Application.Responses;
 using Cortex.Mediator;
 using Cortex.Mediator.Commands;
 using Domain.Common.Exceptions.CustomExceptions;
@@ -11,8 +10,8 @@ using XComment = Domain.Posts.PostComment;
 namespace Application.Requests.Posts.PostComment.Commands.RemoveCommentFromPost;
 
 public class RemoveCommentFromPostHandler(
-    IRepository<Post, PostResponseDto> postRepository,
-    IRepository<XComment, PostCommentResponseDto> commentRepository,
+    IRepository<Post> postRepository,
+    IRepository<XComment> commentRepository,
     ICacheService cache
     ) : ICommandHandler<RemoveCommentFromPostCommand, Unit>
 {
@@ -22,10 +21,10 @@ public class RemoveCommentFromPostHandler(
         var userGuid = Parser.ParseIdOrThrow(request.UserId);
         var commentGuid = Parser.ParseIdOrThrow(request.CommentId);
         
-        var post = await postRepository.GetEntityByIdAsync(postGuid);
+        var post = await postRepository.GetByIdAsync(postGuid, cancellationToken);
         if (post is null) throw new NotFoundException("Post not found.");
         
-        var comment = await commentRepository.GetEntityByIdAsync(commentGuid);
+        var comment = await commentRepository.GetByIdAsync(commentGuid, cancellationToken);
         if (comment is null) throw new NotFoundException("Comment not found.");
         
         if (comment.PostId != postGuid) throw new BadRequestException("Post does not own the comment.");

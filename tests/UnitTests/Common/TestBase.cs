@@ -16,7 +16,9 @@ public abstract class TestBase
     {
         var mapperConfig = new MapperConfiguration(cfg =>
         {
+            cfg.AddProfile<CommonProfile>();
             cfg.AddProfile<UserProfile>();
+            cfg.AddProfile<FriendshipProfile>();
             cfg.AddProfile<PostProfile>();
         });
         

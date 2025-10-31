@@ -7,6 +7,7 @@ namespace Infrastructure.Persistence.DataContext.AppDb;
 public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(options)
 {
     public DbSet<AppUser> Users => Set<AppUser>();
+    public DbSet<Friendship> Friendships => Set<Friendship>();
     
     public DbSet<Post> Posts => Set<Post>();
     public DbSet<PostComment> PostComments => Set<PostComment>();

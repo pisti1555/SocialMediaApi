@@ -33,7 +33,8 @@ internal static class PersistenceDependencyInjection
 
         services.AddScoped<ICustomUnitOfWork, CustomUnitOfWork>();
 
-        services.AddScoped(typeof(IRepository<,>), typeof(Repository<,>));
+        services.AddScoped(typeof(IRepository<>), typeof(EntityRepository<>));
+        services.AddScoped(typeof(IRepository<,>), typeof(QueryRepository<,>));
         services.AddScoped(typeof(IOutsideServicesRepository<>), typeof(OutsideServicesRepository<>));
         
         return services;

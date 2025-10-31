@@ -28,6 +28,13 @@ The API serves as the backend for a social media platform, which I plan to integ
 ### Users
 - Get by ID
 - Get all (paged)
+- #### Friendships
+  - Add friend
+  - Accept friend request
+  - Decline friend request
+  - Delete friend
+  - Get friends of user (unpaged)
+  - Get friend requests of user (unpaged)
 
 ### Posts
 - Get by ID
@@ -35,16 +42,14 @@ The API serves as the backend for a social media platform, which I plan to integ
 - Create
 - Edit
 - Delete
-
-### Likes of posts
-- Like and dislike
-- Get likes of post (unpaged)
-
-### Comments of posts
-- Add
-- Edit
-- Delete
-- Get comments of post (unpaged)
+- #### Likes of posts
+  - Like and dislike
+  - Get likes of post (unpaged)
+- #### Comments of posts
+  - Add
+  - Edit
+  - Delete
+  - Get comments of post (unpaged)
 
 ## Usage
 ### API Documentation

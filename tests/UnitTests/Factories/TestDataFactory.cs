@@ -36,6 +36,32 @@ internal static class TestDataFactory
             ).UseSeed(seed);
     }
 
+    private static Faker<Friendship> FriendshipFaker(AppUser requester, AppUser? responder = null, bool isConfirmed = false, bool useNewSeed = false)
+    {
+        var seed = 5260;
+        if (useNewSeed)
+        {
+            seed = Random.Shared.Next(10, int.MaxValue);
+        }
+
+        return new Faker<Friendship>()
+            .CustomInstantiator(_ =>
+                {
+                    var notNullResponder = responder ?? UserFaker(useNewSeed).Generate();
+                    var friendship = FriendshipFactory.Create(
+                        requester,
+                        notNullResponder
+                    );
+                    
+                    if (isConfirmed)
+                    {
+                        friendship.Confirm(notNullResponder.Id);
+                    }
+                    
+                    return friendship;
+                }).UseSeed(seed);
+    }
+
     private static Faker<Post> PostFaker(AppUser? user, bool useNewSeed = false)
     {
         var seed = 20;
@@ -162,12 +188,14 @@ internal static class TestDataFactory
     // --- Factories ---
     // AppUser
     internal static AppUser CreateUser(bool useNewSeed = false, string? userName = null, string? email = null) => UserFaker(useNewSeed, userName, email).Generate();
-
     internal static List<AppUser> CreateUsers(int count, bool useNewSeed = false) => UserFaker(useNewSeed).Generate(count);
 
+    // Friendships
+    internal static Friendship CreateFriendship(AppUser requester, AppUser? responder = null, bool isConfirmed = false, bool useNewSeed = false) => FriendshipFaker(requester, responder, isConfirmed, useNewSeed).Generate();
+    internal static List<Friendship> CreateFriendships(AppUser requester, int count, bool isConfirmed = false, bool useNewSeed = false) => FriendshipFaker(requester, CreateUser(useNewSeed), isConfirmed).Generate(count);
+    
     // Post
     internal static Post CreatePost(AppUser? user = null, bool useNewSeed = false) => PostFaker(user, useNewSeed).Generate();
-
     internal static List<Post> CreatePosts(int count, AppUser? user = null, bool useNewSeed = false) => PostFaker(user, useNewSeed).Generate(count);
 
     // PostComment

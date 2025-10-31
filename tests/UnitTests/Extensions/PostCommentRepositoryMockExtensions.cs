@@ -9,12 +9,15 @@ namespace UnitTests.Extensions;
 
 public static class PostCommentRepositoryMockExtensions
 {
-    public static void SetupComment(this Mock<IRepository<XComment, PostCommentResponseDto>> commentRepositoryMock, XComment? comment, IMapper mapper)
+    public static void SetupComment(this Mock<IRepository<XComment>> commentRepositoryMock, XComment? comment)
     {
         commentRepositoryMock
-            .Setup(x => x.GetEntityByIdAsync(It.Is<Guid>(id => comment != null && id == comment.Id)))
+            .Setup(x => x.GetByIdAsync(It.Is<Guid>(id => comment != null && id == comment.Id), It.IsAny<CancellationToken>()))
             .ReturnsAsync(comment);
-        
+    }
+    
+    public static void SetupComment(this Mock<IRepository<XComment, PostCommentResponseDto>> commentRepositoryMock, XComment? comment, IMapper mapper)
+    {
         commentRepositoryMock
             .Setup(x => x.GetByIdAsync(It.Is<Guid>(id => comment != null && id == comment.Id), It.IsAny<CancellationToken>()))
             .ReturnsAsync(comment is not null ? mapper.Map<PostCommentResponseDto>(comment) : null);

@@ -40,19 +40,11 @@ public class PostEntityConfiguration : IEntityTypeConfiguration<Post>
             .WithOne(x => x.Post)
             .HasForeignKey(x => x.PostId)
             .OnDelete(DeleteBehavior.Cascade);
-        
-        builder.Navigation(x => x.Likes)
-            .HasField("_likes")
-            .UsePropertyAccessMode(PropertyAccessMode.Field);
 
         builder.HasMany(x => x.Comments)
             .WithOne(x => x.Post)
             .HasForeignKey(x => x.PostId)
             .OnDelete(DeleteBehavior.Cascade);
-        
-        builder.Navigation(x => x.Comments)
-            .HasField("_comments")
-            .UsePropertyAccessMode(PropertyAccessMode.Field);
         
         builder.HasIndex(x => x.Id).IsUnique();
         builder.HasIndex(x => x.UserId);

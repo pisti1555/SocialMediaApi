@@ -21,10 +21,10 @@ public class UpdateCommentOfPostHandlerTest : BasePostHandlerTest
     public UpdateCommentOfPostHandlerTest()
     {
         _updateCommentOfPostHandler = new UpdateCommentOfPostHandler(
-            UserRepositoryMock.Object, 
-            PostRepositoryMock.Object, 
-            CommentRepositoryMock.Object,
-            CacheServiceMock.Object, 
+            UserEntityRepositoryMock.Object, 
+            PostEntityRepositoryMock.Object, 
+            CommentEntityRepositoryMock.Object,
+            CacheServiceMock.Object,
             Mapper
         );
         
@@ -37,15 +37,15 @@ public class UpdateCommentOfPostHandlerTest : BasePostHandlerTest
     {
         if (!success)
         {
-            CommentRepositoryMock.Verify(x => x.Update(It.IsAny<XPostComment>()), Times.Never);
-            PostRepositoryMock.Verify(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
+            CommentEntityRepositoryMock.Verify(x => x.Update(It.IsAny<XPostComment>()), Times.Never);
+            PostEntityRepositoryMock.Verify(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
             CacheServiceMock.VerifyCacheRemove(It.IsAny<string>(), false);
             Assert.Equal(lastInteraction, _post.LastInteraction);
             return;
         }
         
-        CommentRepositoryMock.Verify(x => x.Update(It.IsAny<XPostComment>()), Times.Once);
-        PostRepositoryMock.Verify(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
+        CommentEntityRepositoryMock.Verify(x => x.Update(It.IsAny<XPostComment>()), Times.Once);
+        PostEntityRepositoryMock.Verify(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
         CacheServiceMock.VerifyCacheRemove(It.IsAny<string>());
         Assert.True(_post.LastInteraction > lastInteraction);
     }
@@ -56,10 +56,10 @@ public class UpdateCommentOfPostHandlerTest : BasePostHandlerTest
         // Arrange
         var command = new UpdateCommentOfPostCommand(_post.Id.ToString(), _comment.Id.ToString(), _user.Id.ToString(), "Updated comment text");
         
-        UserRepositoryMock.SetupUser(_user, Mapper);
-        PostRepositoryMock.SetupPost(_post, Mapper);
-        CommentRepositoryMock.SetupComment(_comment, Mapper);
-        PostRepositoryMock.SetupSaveChanges();
+        UserEntityRepositoryMock.SetupUser(_user);
+        PostEntityRepositoryMock.SetupPost(_post);
+        CommentEntityRepositoryMock.SetupComment(_comment);
+        PostEntityRepositoryMock.SetupSaveChanges();
         
         var previousLastInteraction = _post.LastInteraction;
 
@@ -79,11 +79,11 @@ public class UpdateCommentOfPostHandlerTest : BasePostHandlerTest
         
         var command = new UpdateCommentOfPostCommand(_post.Id.ToString(), _comment.Id.ToString(), otherUser.Id.ToString(), "Updated post text");
         
-        UserRepositoryMock.SetupUser(_user, Mapper);
-        UserRepositoryMock.SetupUser(otherUser, Mapper);
-        PostRepositoryMock.SetupPost(_post, Mapper);
-        CommentRepositoryMock.SetupComment(_comment, Mapper);
-        PostRepositoryMock.SetupSaveChanges();
+        UserEntityRepositoryMock.SetupUser(_user);
+        UserEntityRepositoryMock.SetupUser(otherUser);
+        PostEntityRepositoryMock.SetupPost(_post);
+        CommentEntityRepositoryMock.SetupComment(_comment);
+        PostEntityRepositoryMock.SetupSaveChanges();
         
         var previousLastInteraction = _post.LastInteraction;
 
@@ -102,11 +102,11 @@ public class UpdateCommentOfPostHandlerTest : BasePostHandlerTest
         
         var command = new UpdateCommentOfPostCommand(otherPost.Id.ToString(), _comment.Id.ToString(), _user.Id.ToString(), "Updated post text");
         
-        UserRepositoryMock.SetupUser(_user, Mapper);
-        PostRepositoryMock.SetupPost(_post, Mapper);
-        PostRepositoryMock.SetupPost(otherPost, Mapper);
-        CommentRepositoryMock.SetupComment(_comment, Mapper);
-        PostRepositoryMock.SetupSaveChanges();
+        UserEntityRepositoryMock.SetupUser(_user);
+        PostEntityRepositoryMock.SetupPost(_post);
+        PostEntityRepositoryMock.SetupPost(otherPost);
+        CommentEntityRepositoryMock.SetupComment(_comment);
+        PostEntityRepositoryMock.SetupSaveChanges();
         
         var previousLastInteraction = _post.LastInteraction;
 
@@ -123,10 +123,10 @@ public class UpdateCommentOfPostHandlerTest : BasePostHandlerTest
         // Arrange
         var command = new UpdateCommentOfPostCommand(_post.Id.ToString(), _comment.Id.ToString(), _user.Id.ToString(), new string('a', 1001));
         
-        UserRepositoryMock.SetupUser(_user, Mapper);
-        PostRepositoryMock.SetupPost(_post, Mapper);
-        CommentRepositoryMock.SetupComment(_comment, Mapper);
-        PostRepositoryMock.SetupSaveChanges();
+        UserEntityRepositoryMock.SetupUser(_user);
+        PostEntityRepositoryMock.SetupPost(_post);
+        CommentEntityRepositoryMock.SetupComment(_comment);
+        PostEntityRepositoryMock.SetupSaveChanges();
         
         var previousLastInteraction = _post.LastInteraction;
         
@@ -144,19 +144,19 @@ public class UpdateCommentOfPostHandlerTest : BasePostHandlerTest
         const string invalidUserId = "invalid-guid";
         var command = new UpdateCommentOfPostCommand(_post.Id.ToString(), _comment.Id.ToString(), invalidUserId, "Updated comment text");
         
-        UserRepositoryMock.SetupUser(_user, Mapper);
-        PostRepositoryMock.SetupPost(_post, Mapper);
-        CommentRepositoryMock.SetupComment(_comment, Mapper);
-        PostRepositoryMock.SetupSaveChanges();
+        UserEntityRepositoryMock.SetupUser(_user);
+        PostEntityRepositoryMock.SetupPost(_post);
+        CommentEntityRepositoryMock.SetupComment(_comment);
+        PostEntityRepositoryMock.SetupSaveChanges();
         
         var previousLastInteraction = _post.LastInteraction;
 
         // Act & Assert
         await Assert.ThrowsAsync<BadRequestException>(() => _updateCommentOfPostHandler.Handle(command, CancellationToken.None));
         
-        UserRepositoryMock.Verify(x => x.GetEntityByIdAsync(It.IsAny<Guid>()), Times.Never);
-        PostRepositoryMock.Verify(x => x.GetEntityByIdAsync(_post.Id), Times.Never);
-        CommentRepositoryMock.Verify(x => x.GetEntityByIdAsync(_comment.Id), Times.Never);
+        UserEntityRepositoryMock.Verify(x => x.GetByIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()), Times.Never);
+        PostEntityRepositoryMock.Verify(x => x.GetByIdAsync(_post.Id, It.IsAny<CancellationToken>()), Times.Never);
+        CommentEntityRepositoryMock.Verify(x => x.GetByIdAsync(_comment.Id, It.IsAny<CancellationToken>()), Times.Never);
         
         VerifyCommentUpdated(previousLastInteraction, success: false);
         Assert.Equal(previousLastInteraction, _post.LastInteraction);
@@ -169,10 +169,10 @@ public class UpdateCommentOfPostHandlerTest : BasePostHandlerTest
         var guid = Guid.NewGuid();
         var command = new UpdateCommentOfPostCommand(_post.Id.ToString(), _comment.Id.ToString(), guid.ToString(), "Updated comment text");
         
-        UserRepositoryMock.SetupUser(null, Mapper);
-        PostRepositoryMock.SetupPost(_post, Mapper);
-        CommentRepositoryMock.SetupComment(_comment, Mapper);
-        PostRepositoryMock.SetupSaveChanges();
+        UserEntityRepositoryMock.SetupUser(null);
+        PostEntityRepositoryMock.SetupPost(_post);
+        CommentEntityRepositoryMock.SetupComment(_comment);
+        PostEntityRepositoryMock.SetupSaveChanges();
         
         var previousLastInteraction = _post.LastInteraction;
 
@@ -190,10 +190,10 @@ public class UpdateCommentOfPostHandlerTest : BasePostHandlerTest
         var guid = Guid.NewGuid();
         var command = new UpdateCommentOfPostCommand(guid.ToString(), _comment.Id.ToString(), _user.Id.ToString(), "Updated comment text");
         
-        UserRepositoryMock.SetupUser(_user, Mapper);
-        PostRepositoryMock.SetupPost(null, Mapper);
-        CommentRepositoryMock.SetupComment(_comment, Mapper);
-        PostRepositoryMock.SetupSaveChanges();
+        UserEntityRepositoryMock.SetupUser(_user);
+        PostEntityRepositoryMock.SetupPost(null);
+        CommentEntityRepositoryMock.SetupComment(_comment);
+        PostEntityRepositoryMock.SetupSaveChanges();
         
         var previousLastInteraction = _post.LastInteraction;
 
@@ -211,10 +211,10 @@ public class UpdateCommentOfPostHandlerTest : BasePostHandlerTest
         var guid = Guid.NewGuid();
         var command = new UpdateCommentOfPostCommand(_post.Id.ToString(), guid.ToString(), _user.Id.ToString(), "Updated comment text");
         
-        UserRepositoryMock.SetupUser(_user, Mapper);
-        PostRepositoryMock.SetupPost(_post, Mapper);
-        CommentRepositoryMock.SetupComment(null, Mapper);
-        PostRepositoryMock.SetupSaveChanges();
+        UserEntityRepositoryMock.SetupUser(_user);
+        PostEntityRepositoryMock.SetupPost(_post);
+        CommentEntityRepositoryMock.SetupComment(null);
+        PostEntityRepositoryMock.SetupSaveChanges();
         
         var previousLastInteraction = _post.LastInteraction;
 

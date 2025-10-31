@@ -19,7 +19,7 @@ public class DeletePostHandlerTest : BasePostHandlerTest
 
     public DeletePostHandlerTest()
     {
-        _deletePostHandler = new DeletePostHandler(PostRepositoryMock.Object, CacheServiceMock.Object);
+        _deletePostHandler = new DeletePostHandler(PostEntityRepositoryMock.Object, CacheServiceMock.Object);
 
         _user = TestDataFactory.CreateUser();
         _post = TestDataFactory.CreatePost(_user);
@@ -27,8 +27,8 @@ public class DeletePostHandlerTest : BasePostHandlerTest
 
     private void AssertPostDeleted(Post post, bool success = true)
     {
-        PostRepositoryMock.Verify(x => x.Delete(post), success ? Times.Once : Times.Never);
-        PostRepositoryMock.Verify(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()), success ? Times.Once : Times.Never);
+        PostEntityRepositoryMock.Verify(x => x.Delete(post), success ? Times.Once : Times.Never);
+        PostEntityRepositoryMock.Verify(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()), success ? Times.Once : Times.Never);
         CacheServiceMock.VerifyCacheRemove($"post-{post.Id}", success);
     }
 
@@ -38,15 +38,15 @@ public class DeletePostHandlerTest : BasePostHandlerTest
         // Arrange
         var command = new DeletePostCommand(_post.Id.ToString(), _user.Id.ToString());
 
-        PostRepositoryMock.SetupPost(_post, Mapper);
-        PostRepositoryMock.SetupPostExistsByAnyFilters(true);
-        PostRepositoryMock.SetupSaveChanges();
+        PostEntityRepositoryMock.SetupPost(_post);
+        PostEntityRepositoryMock.SetupPostExistsByAnyFilters(true);
+        PostEntityRepositoryMock.SetupSaveChanges();
 
         // Act
         await _deletePostHandler.Handle(command, CancellationToken.None);
 
         // Assert
-        PostRepositoryMock.Verify(x => x.ExistsAsync(It.IsAny<Expression<Func<Post, bool>>>(), It.IsAny<CancellationToken>()), Times.Once);
+        PostEntityRepositoryMock.Verify(x => x.ExistsAsync(It.IsAny<Expression<Func<Post, bool>>>(), It.IsAny<CancellationToken>()), Times.Once);
         AssertPostDeleted(_post);
     }
 
@@ -56,14 +56,14 @@ public class DeletePostHandlerTest : BasePostHandlerTest
         // Arrange
         var command = new DeletePostCommand("invalid-guid", _user.Id.ToString());
 
-        PostRepositoryMock.SetupPost(_post, Mapper);
-        PostRepositoryMock.SetupPostExistsByAnyFilters(true);
-        PostRepositoryMock.SetupSaveChanges();
+        PostEntityRepositoryMock.SetupPost(_post);
+        PostEntityRepositoryMock.SetupPostExistsByAnyFilters(true);
+        PostEntityRepositoryMock.SetupSaveChanges();
 
         // Act & Assert
         await Assert.ThrowsAsync<BadRequestException>(() => _deletePostHandler.Handle(command, CancellationToken.None));
         
-        PostRepositoryMock.Verify(x => x.ExistsAsync(It.IsAny<Expression<Func<Post, bool>>>(), It.IsAny<CancellationToken>()), Times.Never);
+        PostEntityRepositoryMock.Verify(x => x.ExistsAsync(It.IsAny<Expression<Func<Post, bool>>>(), It.IsAny<CancellationToken>()), Times.Never);
         AssertPostDeleted(_post, false);
     }
     
@@ -73,14 +73,14 @@ public class DeletePostHandlerTest : BasePostHandlerTest
         // Arrange
         var command = new DeletePostCommand(_post.Id.ToString(), "invalid-guid");
 
-        PostRepositoryMock.SetupPost(_post, Mapper);
-        PostRepositoryMock.SetupPostExistsByAnyFilters(true);
-        PostRepositoryMock.SetupSaveChanges();
+        PostEntityRepositoryMock.SetupPost(_post);
+        PostEntityRepositoryMock.SetupPostExistsByAnyFilters(true);
+        PostEntityRepositoryMock.SetupSaveChanges();
 
         // Act & Assert
         await Assert.ThrowsAsync<BadRequestException>(() => _deletePostHandler.Handle(command, CancellationToken.None));
         
-        PostRepositoryMock.Verify(x => x.ExistsAsync(It.IsAny<Expression<Func<Post, bool>>>(), It.IsAny<CancellationToken>()), Times.Never);
+        PostEntityRepositoryMock.Verify(x => x.ExistsAsync(It.IsAny<Expression<Func<Post, bool>>>(), It.IsAny<CancellationToken>()), Times.Never);
         AssertPostDeleted(_post, false);
     }
 
@@ -90,14 +90,14 @@ public class DeletePostHandlerTest : BasePostHandlerTest
         // Arrange
         var command = new DeletePostCommand(_post.Id.ToString(), _user.Id.ToString());
 
-        PostRepositoryMock.SetupPost(null, Mapper);
-        PostRepositoryMock.SetupPostExistsByAnyFilters(true);
-        PostRepositoryMock.SetupSaveChanges();
+        PostEntityRepositoryMock.SetupPost(null);
+        PostEntityRepositoryMock.SetupPostExistsByAnyFilters(true);
+        PostEntityRepositoryMock.SetupSaveChanges();
 
         // Act & Assert
         await Assert.ThrowsAsync<NotFoundException>(() => _deletePostHandler.Handle(command, CancellationToken.None));
         
-        PostRepositoryMock.Verify(x => x.ExistsAsync(It.IsAny<Expression<Func<Post, bool>>>(), It.IsAny<CancellationToken>()), Times.Never);
+        PostEntityRepositoryMock.Verify(x => x.ExistsAsync(It.IsAny<Expression<Func<Post, bool>>>(), It.IsAny<CancellationToken>()), Times.Never);
         AssertPostDeleted(_post, false);
     }
     
@@ -107,14 +107,14 @@ public class DeletePostHandlerTest : BasePostHandlerTest
         // Arrange
         var command = new DeletePostCommand(_post.Id.ToString(), _user.Id.ToString());
 
-        PostRepositoryMock.SetupPost(_post, Mapper);
-        PostRepositoryMock.SetupPostExistsByAnyFilters(false);
-        PostRepositoryMock.SetupSaveChanges();
+        PostEntityRepositoryMock.SetupPost(_post);
+        PostEntityRepositoryMock.SetupPostExistsByAnyFilters(false);
+        PostEntityRepositoryMock.SetupSaveChanges();
 
         // Act & Assert
         await Assert.ThrowsAsync<BadRequestException>(() => _deletePostHandler.Handle(command, CancellationToken.None));
         
-        PostRepositoryMock.Verify(x => x.ExistsAsync(It.IsAny<Expression<Func<Post, bool>>>(), It.IsAny<CancellationToken>()), Times.Once);
+        PostEntityRepositoryMock.Verify(x => x.ExistsAsync(It.IsAny<Expression<Func<Post, bool>>>(), It.IsAny<CancellationToken>()), Times.Once);
         AssertPostDeleted(_post, false);
     }
 }

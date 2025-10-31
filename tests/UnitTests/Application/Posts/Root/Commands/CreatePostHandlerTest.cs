@@ -17,7 +17,7 @@ public class CreatePostHandlerTest : BasePostHandlerTest
 
     public CreatePostHandlerTest()
     {
-        _createPostHandler = new CreatePostHandler(PostRepositoryMock.Object, UserRepositoryMock.Object, Mapper);
+        _createPostHandler = new CreatePostHandler(PostEntityRepositoryMock.Object, UserEntityRepositoryMock.Object, Mapper);
 
         _user = TestDataFactory.CreateUser();
     }
@@ -26,13 +26,13 @@ public class CreatePostHandlerTest : BasePostHandlerTest
     {
         if (!success)
         {
-            PostRepositoryMock.Verify(x => x.Add(It.IsAny<Post>()), Times.Never);
-            PostRepositoryMock.Verify(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
+            PostEntityRepositoryMock.Verify(x => x.Add(It.IsAny<Post>()), Times.Never);
+            PostEntityRepositoryMock.Verify(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
             return;
         }
         
-        PostRepositoryMock.Verify(x => x.Add(It.IsAny<Post>()), Times.Once);
-        PostRepositoryMock.Verify(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
+        PostEntityRepositoryMock.Verify(x => x.Add(It.IsAny<Post>()), Times.Once);
+        PostEntityRepositoryMock.Verify(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]
@@ -41,14 +41,14 @@ public class CreatePostHandlerTest : BasePostHandlerTest
         // Arrange
         var command = new CreatePostCommand("Test post text", _user.Id.ToString());
         
-        UserRepositoryMock.SetupUser(_user, Mapper);
-        PostRepositoryMock.SetupSaveChanges();
+        UserEntityRepositoryMock.SetupUser(_user);
+        PostEntityRepositoryMock.SetupSaveChanges();
 
         // Act
         await _createPostHandler.Handle(command, CancellationToken.None);
 
         // Assert
-        UserRepositoryMock.Verify(x => x.GetEntityByIdAsync(_user.Id), Times.Once);
+        UserEntityRepositoryMock.Verify(x => x.GetByIdAsync(_user.Id, It.IsAny<CancellationToken>()), Times.Once);
         VerifyPostAdded();
     }
 
@@ -58,13 +58,13 @@ public class CreatePostHandlerTest : BasePostHandlerTest
         // Arrange
         var command = new CreatePostCommand(new string('a', 20001), _user.Id.ToString());
         
-        UserRepositoryMock.SetupUser(_user, Mapper);
-        PostRepositoryMock.SetupSaveChanges();
+        UserEntityRepositoryMock.SetupUser(_user);
+        PostEntityRepositoryMock.SetupSaveChanges();
 
         // Act & Assert
         await Assert.ThrowsAsync<BadRequestException>(() => _createPostHandler.Handle(command, CancellationToken.None));
         
-        UserRepositoryMock.Verify(x => x.GetEntityByIdAsync(_user.Id), Times.Once);
+        UserEntityRepositoryMock.Verify(x => x.GetByIdAsync(_user.Id, It.IsAny<CancellationToken>()), Times.Once);
         VerifyPostAdded(success: false);
     }
 
@@ -75,13 +75,13 @@ public class CreatePostHandlerTest : BasePostHandlerTest
         const string invalidUserId = "invalid-guid";
         var command = new CreatePostCommand("Test post text", invalidUserId);
         
-        UserRepositoryMock.SetupUser(_user, Mapper);
-        PostRepositoryMock.SetupSaveChanges();
+        UserEntityRepositoryMock.SetupUser(_user);
+        PostEntityRepositoryMock.SetupSaveChanges();
 
         // Act & Assert
         await Assert.ThrowsAsync<BadRequestException>(() => _createPostHandler.Handle(command, CancellationToken.None));
         
-        UserRepositoryMock.Verify(x => x.GetEntityByIdAsync(It.IsAny<Guid>()), Times.Never);
+        UserEntityRepositoryMock.Verify(x => x.GetByIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()), Times.Never);
         VerifyPostAdded(success: false);
     }
 
@@ -92,13 +92,13 @@ public class CreatePostHandlerTest : BasePostHandlerTest
         var guid = Guid.NewGuid();
         var command = new CreatePostCommand("Test post text", guid.ToString());
         
-        UserRepositoryMock.SetupUser(null, Mapper);
-        PostRepositoryMock.SetupSaveChanges();
+        UserEntityRepositoryMock.SetupUser(null);
+        PostEntityRepositoryMock.SetupSaveChanges();
 
         // Act & Assert
         await Assert.ThrowsAsync<BadRequestException>(() => _createPostHandler.Handle(command, CancellationToken.None));
         
-        UserRepositoryMock.Verify(x => x.GetEntityByIdAsync(guid), Times.Once);
+        UserEntityRepositoryMock.Verify(x => x.GetByIdAsync(guid, It.IsAny<CancellationToken>()), Times.Once);
         VerifyPostAdded(success: false);
     }
 }

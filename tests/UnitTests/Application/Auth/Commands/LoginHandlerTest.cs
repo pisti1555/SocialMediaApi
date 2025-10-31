@@ -24,7 +24,7 @@ public class LoginHandlerTest : BaseUserHandlerTest
     public LoginHandlerTest()
     {
         _loginHandler = new LoginHandler(
-            UserRepositoryMock.Object,
+            UserEntityRepositoryMock.Object,
             AuthServiceMock.Object,
             _tokenServiceMock.Object,
             _hasherMock.Object,
@@ -42,7 +42,7 @@ public class LoginHandlerTest : BaseUserHandlerTest
         
         var command = new LoginCommand(user.UserName, "Test-Password-123", false);
         
-        UserRepositoryMock.Setup(x => x.GetEntityAsync(It.IsAny<Expression<Func<AppUser, bool>>>(), It.IsAny<CancellationToken>()))
+        UserEntityRepositoryMock.Setup(x => x.GetAsync(It.IsAny<Expression<Func<AppUser, bool>>>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(user);
         AuthServiceMock.SetupCheckPasswordAsync(true);
         AuthServiceMock.SetupGetRolesAsync(["User"]);
@@ -66,7 +66,7 @@ public class LoginHandlerTest : BaseUserHandlerTest
         Assert.False(string.IsNullOrWhiteSpace(result.AccessToken));
         Assert.False(string.IsNullOrWhiteSpace(result.RefreshToken));
         
-        UserRepositoryMock.Verify(x => x.GetEntityAsync(It.IsAny<Expression<Func<AppUser, bool>>>(), It.IsAny<CancellationToken>()), Times.Once);
+        UserEntityRepositoryMock.Verify(x => x.GetAsync(It.IsAny<Expression<Func<AppUser, bool>>>(), It.IsAny<CancellationToken>()), Times.Once);
         AuthServiceMock.Verify(x => x.CheckPasswordAsync(user, It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Once);
         _tokenServiceMock.Verify(x => x.CreateAccessToken(user.Id.ToString(), user.UserName, user.Email, new[]{"User"}, null), Times.Once);
         _tokenServiceMock.Verify(x => x.CreateRefreshToken(), Times.Once);
@@ -79,7 +79,7 @@ public class LoginHandlerTest : BaseUserHandlerTest
         // Arrange
         var command = new LoginCommand("validUser", "Test-Password-123", false);
         
-        UserRepositoryMock.Setup(x => x.GetEntityAsync(It.IsAny<Expression<Func<AppUser, bool>>>(), It.IsAny<CancellationToken>()))
+        UserEntityRepositoryMock.Setup(x => x.GetAsync(It.IsAny<Expression<Func<AppUser, bool>>>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync((AppUser?)null);
         AuthServiceMock.SetupCheckPasswordAsync(true);
         AuthServiceMock.SetupGetRolesAsync(["User"]);
@@ -93,7 +93,7 @@ public class LoginHandlerTest : BaseUserHandlerTest
         await Assert.ThrowsAsync<UnauthorizedException>(() => _loginHandler.Handle(command, CancellationToken.None));
         
         // Assert
-        UserRepositoryMock.Verify(x => x.GetEntityAsync(It.IsAny<Expression<Func<AppUser, bool>>>(), It.IsAny<CancellationToken>()), Times.Once);
+        UserEntityRepositoryMock.Verify(x => x.GetAsync(It.IsAny<Expression<Func<AppUser, bool>>>(), It.IsAny<CancellationToken>()), Times.Once);
         AuthServiceMock.Verify(x => x.CheckPasswordAsync(It.IsAny<AppUser>(), It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
         AuthServiceMock.Verify(x => x.SaveTokenAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>(), It.IsAny<CancellationToken>()), Times.Never);
         _tokenServiceMock.Verify(x => x.CreateAccessToken(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<IEnumerable<string>>(), It.IsAny<string>()), Times.Never);
@@ -107,7 +107,7 @@ public class LoginHandlerTest : BaseUserHandlerTest
         var user = TestDataFactory.CreateUser();
         var command = new LoginCommand("validUser", "Test-Password-123", false);
         
-        UserRepositoryMock.Setup(x => x.GetEntityAsync(It.IsAny<Expression<Func<AppUser, bool>>>(), It.IsAny<CancellationToken>()))
+        UserEntityRepositoryMock.Setup(x => x.GetAsync(It.IsAny<Expression<Func<AppUser, bool>>>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(user);
         AuthServiceMock.SetupCheckPasswordAsync(false);
         AuthServiceMock.SetupGetRolesAsync(["User"]);
@@ -121,7 +121,7 @@ public class LoginHandlerTest : BaseUserHandlerTest
         await Assert.ThrowsAsync<UnauthorizedException>(() => _loginHandler.Handle(command, CancellationToken.None));
         
         // Assert
-        UserRepositoryMock.Verify(x => x.GetEntityAsync(It.IsAny<Expression<Func<AppUser, bool>>>(), It.IsAny<CancellationToken>()), Times.Once);
+        UserEntityRepositoryMock.Verify(x => x.GetAsync(It.IsAny<Expression<Func<AppUser, bool>>>(), It.IsAny<CancellationToken>()), Times.Once);
         AuthServiceMock.Verify(x => x.CheckPasswordAsync(It.IsAny<AppUser>(), It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Once);
         AuthServiceMock.Verify(x => x.SaveTokenAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>(), It.IsAny<CancellationToken>()), Times.Never);
         _tokenServiceMock.Verify(x => x.CreateAccessToken(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<IEnumerable<string>>(), It.IsAny<string>()), Times.Never);

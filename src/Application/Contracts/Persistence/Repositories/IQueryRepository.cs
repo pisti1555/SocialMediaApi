@@ -6,19 +6,6 @@ namespace Application.Contracts.Persistence.Repositories;
 
 public interface IRepository<TEntity, TDto> where TEntity : EntityBase
 {
-    // UOW
-    Task<bool> SaveChangesAsync(CancellationToken ct = default);
-    bool HasChanges();
-    
-    // Commands
-    void Add(TEntity entity);
-    void Update(TEntity entity);
-    void Delete(TEntity entity);
-    
-    // Queries
-    Task<TEntity?> GetEntityByIdAsync(Guid id);
-    Task<TEntity?> GetEntityAsync(Expression<Func<TEntity, bool>> expression, CancellationToken ct = default);
-    
     Task<TDto?> GetByIdAsync(Guid id, CancellationToken ct = default);
     Task<TDto?> GetAsync(Expression<Func<TEntity, bool>> expression, CancellationToken ct = default);
     

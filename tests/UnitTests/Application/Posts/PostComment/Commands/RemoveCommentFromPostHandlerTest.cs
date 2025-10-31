@@ -20,8 +20,8 @@ public class RemoveCommentFromPostHandlerTest : BasePostHandlerTest
     public RemoveCommentFromPostHandlerTest()
     {
         _handler = new RemoveCommentFromPostHandler(
-            PostRepositoryMock.Object, 
-            CommentRepositoryMock.Object, 
+            PostEntityRepositoryMock.Object, 
+            CommentEntityRepositoryMock.Object, 
             CacheServiceMock.Object
         );
         
@@ -33,17 +33,17 @@ public class RemoveCommentFromPostHandlerTest : BasePostHandlerTest
     {
         if (!success)
         {
-            CommentRepositoryMock.Verify(x => x.Delete(It.IsAny<XPostComment>()), Times.Never);
-            PostRepositoryMock.Verify(x => x.Update(_post), Times.Never);
-            PostRepositoryMock.Verify(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
+            CommentEntityRepositoryMock.Verify(x => x.Delete(It.IsAny<XPostComment>()), Times.Never);
+            PostEntityRepositoryMock.Verify(x => x.Update(_post), Times.Never);
+            PostEntityRepositoryMock.Verify(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
             CacheServiceMock.VerifyCacheRemove(It.IsAny<string>(), false);
             Assert.Equal(lastInteraction, _post.LastInteraction);
             return;
         }
         
-        CommentRepositoryMock.Verify(x => x.Delete(It.IsAny<XPostComment>()), Times.Once);
-        PostRepositoryMock.Verify(x => x.Update(_post), Times.Once);
-        PostRepositoryMock.Verify(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
+        CommentEntityRepositoryMock.Verify(x => x.Delete(It.IsAny<XPostComment>()), Times.Once);
+        PostEntityRepositoryMock.Verify(x => x.Update(_post), Times.Once);
+        PostEntityRepositoryMock.Verify(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
         CacheServiceMock.VerifyCacheRemove($"post-comments-{_post.Id}");
         Assert.True(_post.LastInteraction > lastInteraction);
     }
@@ -54,9 +54,9 @@ public class RemoveCommentFromPostHandlerTest : BasePostHandlerTest
         // Arrange
         var comment = TestDataFactory.CreateComment(_post, _user);
         
-        PostRepositoryMock.SetupPost(_post, Mapper);
-        CommentRepositoryMock.SetupComment(comment, Mapper);
-        PostRepositoryMock.SetupSaveChanges();
+        PostEntityRepositoryMock.SetupPost(_post);
+        CommentEntityRepositoryMock.SetupComment(comment);
+        PostEntityRepositoryMock.SetupSaveChanges();
 
         var command = new RemoveCommentFromPostCommand(_post.Id.ToString(), comment.Id.ToString(), _user.Id.ToString());
         
@@ -75,7 +75,7 @@ public class RemoveCommentFromPostHandlerTest : BasePostHandlerTest
         // Arrange
         var commentId = Guid.NewGuid();
         
-        PostRepositoryMock.SetupPost(null, Mapper);
+        PostEntityRepositoryMock.SetupPost(null);
         
         var command = new RemoveCommentFromPostCommand(_post.Id.ToString(), commentId.ToString(), _user.Id.ToString());
         
@@ -84,8 +84,8 @@ public class RemoveCommentFromPostHandlerTest : BasePostHandlerTest
         // Act & Assert
         await Assert.ThrowsAsync<NotFoundException>(() => _handler.Handle(command, CancellationToken.None));
         
-        PostRepositoryMock.Verify(x => x.GetEntityByIdAsync(_post.Id), Times.Once);
-        CommentRepositoryMock.Verify(x => x.GetEntityByIdAsync(It.IsAny<Guid>()), Times.Never);
+        PostEntityRepositoryMock.Verify(x => x.GetByIdAsync(_post.Id, It.IsAny<CancellationToken>()), Times.Once);
+        CommentEntityRepositoryMock.Verify(x => x.GetByIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()), Times.Never);
         
         VerifyCommentDeleted(previousLastInteraction, false);
     }
@@ -95,10 +95,9 @@ public class RemoveCommentFromPostHandlerTest : BasePostHandlerTest
     {
         // Arrange
         var commentId = Guid.NewGuid();
-
-        UserRepositoryMock.SetupUser(_user, Mapper);
-        PostRepositoryMock.SetupPost(_post, Mapper);
-        CommentRepositoryMock.SetupComment(null, Mapper);
+        
+        PostEntityRepositoryMock.SetupPost(_post);
+        CommentEntityRepositoryMock.SetupComment(null);
 
         var command = new RemoveCommentFromPostCommand(_post.Id.ToString(), commentId.ToString(), _user.Id.ToString());
         
@@ -107,8 +106,8 @@ public class RemoveCommentFromPostHandlerTest : BasePostHandlerTest
         // Act & Assert
         await Assert.ThrowsAsync<NotFoundException>(() => _handler.Handle(command, CancellationToken.None));
         
-        PostRepositoryMock.Verify(x => x.GetEntityByIdAsync(_post.Id), Times.Once);
-        CommentRepositoryMock.Verify(x => x.GetEntityByIdAsync(commentId), Times.Once);
+        PostEntityRepositoryMock.Verify(x => x.GetByIdAsync(_post.Id, It.IsAny<CancellationToken>()), Times.Once);
+        CommentEntityRepositoryMock.Verify(x => x.GetByIdAsync(commentId, It.IsAny<CancellationToken>()), Times.Once);
         
         VerifyCommentDeleted(previousLastInteraction, false);
     }
@@ -120,10 +119,9 @@ public class RemoveCommentFromPostHandlerTest : BasePostHandlerTest
         var comment = TestDataFactory.CreateComment(_post, _user);
         var otherPost = TestDataFactory.CreatePost(_user);
         
-        UserRepositoryMock.SetupUser(_user, Mapper);
-        PostRepositoryMock.SetupPost(_post, Mapper);
-        PostRepositoryMock.SetupPost(otherPost, Mapper);
-        CommentRepositoryMock.SetupComment(comment, Mapper);
+        PostEntityRepositoryMock.SetupPost(_post);
+        PostEntityRepositoryMock.SetupPost(otherPost);
+        CommentEntityRepositoryMock.SetupComment(comment);
         
         var previousLastInteraction = _post.LastInteraction;
 
@@ -132,8 +130,8 @@ public class RemoveCommentFromPostHandlerTest : BasePostHandlerTest
         // Act & Assert
         await Assert.ThrowsAsync<BadRequestException>(() => _handler.Handle(command, CancellationToken.None));
         
-        PostRepositoryMock.Verify(x => x.GetEntityByIdAsync(otherPost.Id), Times.Once);
-        CommentRepositoryMock.Verify(x => x.GetEntityByIdAsync(comment.Id), Times.Once);
+        PostEntityRepositoryMock.Verify(x => x.GetByIdAsync(otherPost.Id, It.IsAny<CancellationToken>()), Times.Once);
+        CommentEntityRepositoryMock.Verify(x => x.GetByIdAsync(comment.Id, It.IsAny<CancellationToken>()), Times.Once);
         
         VerifyCommentDeleted(previousLastInteraction, false);
     }
@@ -145,10 +143,8 @@ public class RemoveCommentFromPostHandlerTest : BasePostHandlerTest
         var otherUser = TestDataFactory.CreateUser();
         var comment = TestDataFactory.CreateComment(_post, _user);
         
-        UserRepositoryMock.SetupUser(_user, Mapper);
-        UserRepositoryMock.SetupUser(otherUser, Mapper);
-        PostRepositoryMock.SetupPost(_post, Mapper);
-        CommentRepositoryMock.SetupComment(comment, Mapper);
+        PostEntityRepositoryMock.SetupPost(_post);
+        CommentEntityRepositoryMock.SetupComment(comment);
         
         var previousLastInteraction = _post.LastInteraction;
 
@@ -157,8 +153,8 @@ public class RemoveCommentFromPostHandlerTest : BasePostHandlerTest
         // Act & Assert
         await Assert.ThrowsAsync<BadRequestException>(() => _handler.Handle(command, CancellationToken.None));
         
-        PostRepositoryMock.Verify(x => x.GetEntityByIdAsync(_post.Id), Times.Once);
-        CommentRepositoryMock.Verify(x => x.GetEntityByIdAsync(comment.Id), Times.Once);
+        PostEntityRepositoryMock.Verify(x => x.GetByIdAsync(_post.Id, It.IsAny<CancellationToken>()), Times.Once);
+        CommentEntityRepositoryMock.Verify(x => x.GetByIdAsync(comment.Id, It.IsAny<CancellationToken>()), Times.Once);
         
         VerifyCommentDeleted(previousLastInteraction, false);
     }
@@ -169,21 +165,20 @@ public class RemoveCommentFromPostHandlerTest : BasePostHandlerTest
         // Arrange
         var comment = TestDataFactory.CreateComment(_post, _user);
         
-        UserRepositoryMock.SetupUser(_user, Mapper);
-        PostRepositoryMock.SetupPost(_post, Mapper);
-        CommentRepositoryMock.SetupComment(comment, Mapper);
-        PostRepositoryMock.SetupSaveChanges(false);
+        PostEntityRepositoryMock.SetupPost(_post);
+        CommentEntityRepositoryMock.SetupComment(comment);
+        PostEntityRepositoryMock.SetupSaveChanges(false);
 
         var command = new RemoveCommentFromPostCommand(_post.Id.ToString(), comment.Id.ToString(), _user.Id.ToString());
 
         // Act & Assert
         await Assert.ThrowsAsync<BadRequestException>(() => _handler.Handle(command, CancellationToken.None));
         
-        PostRepositoryMock.Verify(x => x.GetEntityByIdAsync(_post.Id), Times.Once);
-        CommentRepositoryMock.Verify(x => x.GetEntityByIdAsync(comment.Id), Times.Once);
-        CommentRepositoryMock.Verify(x => x.Delete(It.IsAny<XPostComment>()), Times.Once);
-        PostRepositoryMock.Verify(x => x.Update(_post), Times.Once);
-        PostRepositoryMock.Verify(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
+        PostEntityRepositoryMock.Verify(x => x.GetByIdAsync(_post.Id, It.IsAny<CancellationToken>()), Times.Once);
+        CommentEntityRepositoryMock.Verify(x => x.GetByIdAsync(comment.Id, It.IsAny<CancellationToken>()), Times.Once);
+        CommentEntityRepositoryMock.Verify(x => x.Delete(It.IsAny<XPostComment>()), Times.Once);
+        PostEntityRepositoryMock.Verify(x => x.Update(_post), Times.Once);
+        PostEntityRepositoryMock.Verify(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
         CacheServiceMock.VerifyCacheRemove(It.IsAny<string>(), false);
     }
 }

@@ -2,7 +2,7 @@
 using API.Extensions;
 using Application.Requests.Posts.PostLike.Commands.DislikePost;
 using Application.Requests.Posts.PostLike.Commands.LikePost;
-using Application.Requests.Posts.PostLike.Queries.GetLikesOfPost;
+using Application.Requests.Posts.PostLike.Queries.GetAllOfPost;
 using Application.Responses;
 using Asp.Versioning;
 using Cortex.Mediator;
