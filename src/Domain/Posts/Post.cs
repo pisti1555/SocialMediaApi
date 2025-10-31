@@ -8,12 +8,8 @@ public class Post : EntityBase
 {
     public string Text { get; private set; } = string.Empty;
 
-    private readonly List<PostLike> _likes = [];
-    public IReadOnlyCollection<PostLike> Likes => _likes.AsReadOnly();
-    
-
-    private readonly List<PostComment> _comments = [];
-    public IReadOnlyCollection<PostComment> Comments => _comments.AsReadOnly();
+    public ICollection<PostLike> Likes = [];
+    public ICollection<PostComment> Comments = [];
     
     public DateTime LastInteraction { get; private set; } = DateTime.UtcNow;
     

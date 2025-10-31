@@ -13,7 +13,7 @@ using FluentValidation.Results;
 namespace Application.Requests.Auth.Commands.Registration;
 
 public class RegistrationHandler(
-    IRepository<AppUser, UserResponseDto> repository,
+    IRepository<AppUser> repository,
     ITokenService tokenService,
     IAuthService authService,
     IHasher hasher,

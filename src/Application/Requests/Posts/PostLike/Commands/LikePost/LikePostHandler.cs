@@ -13,9 +13,9 @@ using XPostLike = Domain.Posts.PostLike;
 namespace Application.Requests.Posts.PostLike.Commands.LikePost;
 
 public class LikePostHandler(
-    IRepository<Post, PostResponseDto> postRepository,
-    IRepository<AppUser, UserResponseDto> userRepository,
-    IRepository<XPostLike, PostLikeResponseDto> likeRepository,
+    IRepository<Post> postRepository,
+    IRepository<AppUser> userRepository,
+    IRepository<XPostLike> likeRepository,
     ICacheService cache,
     IMapper mapper
 ) : ICommandHandler<LikePostCommand, PostLikeResponseDto>
@@ -25,10 +25,10 @@ public class LikePostHandler(
         var postGuid = Parser.ParseIdOrThrow(request.PostId);
         var userGuid = Parser.ParseIdOrThrow(request.UserId);
 
-        var post = await postRepository.GetEntityByIdAsync(postGuid);
+        var post = await postRepository.GetByIdAsync(postGuid, cancellationToken);
         if (post is null) throw new NotFoundException("Post not found.");
         
-        var user = await userRepository.GetEntityByIdAsync(userGuid);
+        var user = await userRepository.GetByIdAsync(userGuid, cancellationToken);
         if (user is null) throw new BadRequestException("User not found.");
 
         var hasUserLikedPost = await likeRepository.ExistsAsync(x => 

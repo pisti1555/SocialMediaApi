@@ -10,7 +10,7 @@ using Domain.Posts;
 namespace Application.Requests.Posts.Root.Commands.DeletePost;
 
 public class DeletePostHandler(
-    IRepository<Post, PostResponseDto> repository,
+    IRepository<Post> repository,
     ICacheService cache
 ) : ICommandHandler<DeletePostCommand, Unit>
 {
@@ -19,7 +19,7 @@ public class DeletePostHandler(
         var postId = Parser.ParseIdOrThrow(request.PostId);
         var userId = Parser.ParseIdOrThrow(request.UserId);
         
-        var post = await repository.GetEntityByIdAsync(postId);
+        var post = await repository.GetByIdAsync(postId, cancellationToken);
         if (post is null) throw new NotFoundException("Post not found.");
         
         var exists = await repository.ExistsAsync(x => x.UserId == userId && x.Id == postId, cancellationToken);

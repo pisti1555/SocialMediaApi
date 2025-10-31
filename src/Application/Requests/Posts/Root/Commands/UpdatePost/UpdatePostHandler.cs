@@ -11,8 +11,8 @@ using Domain.Users;
 namespace Application.Requests.Posts.Root.Commands.UpdatePost;
 
 public class UpdatePostHandler(
-    IRepository<AppUser, UserResponseDto> userRepository,
-    IRepository<Post, PostResponseDto> postRepository,
+    IRepository<AppUser> userRepository,
+    IRepository<Post> postRepository,
     ICacheService cache,
     IMapper mapper
 ) : ICommandHandler<UpdatePostCommand, PostResponseDto>
@@ -25,7 +25,7 @@ public class UpdatePostHandler(
         var user = await userRepository.GetByIdAsync(userId, cancellationToken);
         if (user is null) throw new BadRequestException("User not found.");
         
-        var post = await postRepository.GetEntityByIdAsync(postId);
+        var post = await postRepository.GetByIdAsync(postId, cancellationToken);
         if (post is null) throw new NotFoundException("Post not found.");
         
         if (post.UserId != userId) throw new BadRequestException("User does not own the post.");

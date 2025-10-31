@@ -11,8 +11,15 @@ namespace UnitTests.Application.Posts.Common;
 
 public abstract class BasePostHandlerTest : TestBase
 {
-    protected readonly Mock<IRepository<AppUser, UserResponseDto>> UserRepositoryMock = new();
-    protected readonly Mock<IRepository<Post, PostResponseDto>> PostRepositoryMock = new();
-    protected readonly Mock<IRepository<XComment, PostCommentResponseDto>> CommentRepositoryMock = new();
-    protected readonly Mock<IRepository<XLike, PostLikeResponseDto>> LikeRepositoryMock = new();
+    protected readonly Mock<IRepository<AppUser>> UserEntityRepositoryMock = new();
+    protected readonly Mock<IRepository<AppUser, UserResponseDto>> UserQueryRepositoryMock = new();
+    
+    protected readonly Mock<IRepository<Post>> PostEntityRepositoryMock = new();
+    protected readonly Mock<IRepository<Post, PostResponseDto>> PostQueryRepositoryMock = new();
+    
+    protected readonly Mock<IRepository<XComment>> CommentEntityRepositoryMock = new();
+    protected readonly Mock<IRepository<XComment, PostCommentResponseDto>> CommentQueryRepositoryMock = new();
+    
+    protected readonly Mock<IRepository<XLike>> LikeEntityRepositoryMock = new();
+    protected readonly Mock<IRepository<XLike, PostLikeResponseDto>> LikeQueryRepositoryMock = new();
 }

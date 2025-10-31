@@ -15,7 +15,7 @@ public class GetAllPostsPagedHandlerTest : BasePostHandlerTest
 
     public GetAllPostsPagedHandlerTest()
     {
-        _handler = new GetAllPostsPagedHandler(PostRepositoryMock.Object);
+        _handler = new GetAllPostsPagedHandler(PostQueryRepositoryMock.Object);
         
         var postsList = TestDataFactory.CreatePosts(5);
         var postResponseDtoList = Mapper.Map<List<PostResponseDto>>(postsList);
@@ -51,13 +51,13 @@ public class GetAllPostsPagedHandlerTest : BasePostHandlerTest
     public async Task Handle_WhenItems_ShouldReturnPagedResult()
     {
         // Arrange
-        PostRepositoryMock.SetupGetPaged(_posts);
+        PostQueryRepositoryMock.SetupGetPaged(_posts);
 
         // Act
         var result = await _handler.Handle(Query, CancellationToken.None);
 
         // Assert
-        PostRepositoryMock.VerifyGetPaged();
+        PostQueryRepositoryMock.VerifyGetPaged();
         
         AssertPostsMatch(_posts, result);
     }
@@ -68,12 +68,12 @@ public class GetAllPostsPagedHandlerTest : BasePostHandlerTest
         // Arrange
         var emptyPosts = PagedResult<PostResponseDto>.Create(new List<PostResponseDto>(), 0, 1, 10);
         
-        PostRepositoryMock.SetupGetPaged(emptyPosts);
+        PostQueryRepositoryMock.SetupGetPaged(emptyPosts);
         
         var result = await _handler.Handle(Query, CancellationToken.None);
         
         // Assert
-        PostRepositoryMock.VerifyGetPaged();
+        PostQueryRepositoryMock.VerifyGetPaged();
         
         AssertPostsMatch(emptyPosts, result);
     }

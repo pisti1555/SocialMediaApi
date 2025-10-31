@@ -9,7 +9,7 @@ using Domain.Users;
 namespace Application.Requests.Auth.Commands.Login;
 
 public class LoginHandler(
-    IRepository<AppUser, UserResponseDto> repository, 
+    IRepository<AppUser> repository, 
     IAuthService authService,
     ITokenService tokenService,
     IHasher hasher,
@@ -59,7 +59,7 @@ public class LoginHandler(
     // Helpers
     private async Task<AppUser> GetUserAsync(string userName, CancellationToken cancellationToken)
     {
-        var user = await repository.GetEntityAsync(x => x.UserName == userName, cancellationToken);
+        var user = await repository.GetAsync(x => x.UserName == userName, cancellationToken);
         return user ?? throw new UnauthorizedException("Invalid username or password.");
     }
     

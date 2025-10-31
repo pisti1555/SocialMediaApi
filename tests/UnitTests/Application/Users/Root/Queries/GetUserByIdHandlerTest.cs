@@ -19,7 +19,7 @@ public class GetUserByIdHandlerTest : BaseUserHandlerTest
 
     public GetUserByIdHandlerTest()
     {
-        _handler = new GetUserByIdHandler(UserRepositoryMock.Object, CacheServiceMock.Object);
+        _handler = new GetUserByIdHandler(UserQueryRepositoryMock.Object, CacheServiceMock.Object);
         
         _user = TestDataFactory.CreateUser();
         _userCacheKey = $"user-{_user.Id.ToString()}";
@@ -44,14 +44,14 @@ public class GetUserByIdHandlerTest : BaseUserHandlerTest
     {
         // Arrange
         CacheServiceMock.SetupCache<UserResponseDto?>(_userCacheKey, null);
-        UserRepositoryMock.SetupUser(_user, Mapper);
+        UserQueryRepositoryMock.SetupUser(_user, Mapper);
 
         // Act
         var result = await _handler.Handle(_query, CancellationToken.None);
 
         // Assert
         CacheServiceMock.VerifyCacheHit<UserResponseDto?>(_userCacheKey);
-        UserRepositoryMock.Verify(x => x.GetByIdAsync(_user.Id, It.IsAny<CancellationToken>()), Times.Once);
+        UserQueryRepositoryMock.Verify(x => x.GetByIdAsync(_user.Id, It.IsAny<CancellationToken>()), Times.Once);
         
         AssertUserMatch(_user, result);
     }
@@ -61,14 +61,14 @@ public class GetUserByIdHandlerTest : BaseUserHandlerTest
     {
         // Arrange
         CacheServiceMock.SetupCache<UserResponseDto?>(_userCacheKey, Mapper.Map<UserResponseDto>(_user));
-        UserRepositoryMock.SetupUser(_user, Mapper);
+        UserQueryRepositoryMock.SetupUser(_user, Mapper);
 
         // Act
         var result = await _handler.Handle(_query, CancellationToken.None);
 
         // Assert
         CacheServiceMock.VerifyCacheHit<UserResponseDto?>(_userCacheKey);
-        UserRepositoryMock.Verify(x => x.GetByIdAsync(_user.Id, It.IsAny<CancellationToken>()), Times.Never);
+        UserQueryRepositoryMock.Verify(x => x.GetByIdAsync(_user.Id, It.IsAny<CancellationToken>()), Times.Never);
         
         AssertUserMatch(_user, result);
     }
@@ -78,13 +78,13 @@ public class GetUserByIdHandlerTest : BaseUserHandlerTest
     {
         // Arrange
         CacheServiceMock.SetupCache<UserResponseDto?>(_userCacheKey, null);
-        UserRepositoryMock.SetupUser(null, Mapper);
+        UserQueryRepositoryMock.SetupUser(null, Mapper);
 
         // Act & Assert
         await Assert.ThrowsAsync<NotFoundException>(() => _handler.Handle(_query, CancellationToken.None));
         
         CacheServiceMock.VerifyCacheHit<UserResponseDto?>(_userCacheKey);
-        UserRepositoryMock.Verify(x => x.GetByIdAsync(_user.Id, It.IsAny<CancellationToken>()), Times.Once);
+        UserQueryRepositoryMock.Verify(x => x.GetByIdAsync(_user.Id, It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]
@@ -97,6 +97,6 @@ public class GetUserByIdHandlerTest : BaseUserHandlerTest
         await Assert.ThrowsAsync<BadRequestException>(() => _handler.Handle(query, CancellationToken.None));
         
         CacheServiceMock.VerifyCacheHit<UserResponseDto?>(It.IsAny<string>(), false);
-        UserRepositoryMock.Verify(x => x.GetByIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()), Times.Never);
+        UserQueryRepositoryMock.Verify(x => x.GetByIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 }

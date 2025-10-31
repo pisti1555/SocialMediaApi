@@ -12,9 +12,9 @@ using XPostLike = Domain.Posts.PostLike;
 namespace Application.Requests.Posts.PostLike.Commands.DislikePost;
 
 public class DislikePostHandler(
-    IRepository<AppUser, UserResponseDto> userRepository,
-    IRepository<Post, PostResponseDto> postRepository,
-    IRepository<XPostLike, PostLikeResponseDto> likeRepository,
+    IRepository<AppUser> userRepository,
+    IRepository<Post> postRepository,
+    IRepository<XPostLike> likeRepository,
     ICacheService cache
 ) : ICommandHandler<DislikePostCommand, Unit>
 { 
@@ -24,16 +24,16 @@ public class DislikePostHandler(
         var postGuid = Parser.ParseIdOrThrow(request.PostId);
         var likeGuid = Parser.ParseIdOrThrow(request.LikeId);
         
-        var like = await likeRepository.GetEntityByIdAsync(likeGuid);
+        var like = await likeRepository.GetByIdAsync(likeGuid, cancellationToken);
         if (like is null) throw new NotFoundException("Like not found.");
         
         if (like.UserId != userGuid) throw new BadRequestException("User does not own the like.");
         if (like.PostId != postGuid) throw new BadRequestException("Post does not own the like.");
         
-        var user = await userRepository.GetEntityByIdAsync(userGuid);
+        var user = await userRepository.GetByIdAsync(userGuid, cancellationToken);
         if (user is null) throw new BadRequestException("User not found.");
         
-        var post = await postRepository.GetEntityByIdAsync(postGuid);
+        var post = await postRepository.GetByIdAsync(postGuid, cancellationToken);
         if (post is null) throw new NotFoundException("Post not found.");
         
         post.UpdateLastInteraction();

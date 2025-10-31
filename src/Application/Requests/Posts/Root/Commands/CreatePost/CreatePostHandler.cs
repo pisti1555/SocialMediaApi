@@ -11,15 +11,15 @@ using Domain.Users;
 namespace Application.Requests.Posts.Root.Commands.CreatePost;
 
 public class CreatePostHandler(
-    IRepository<Post, PostResponseDto> postRepository,
-    IRepository<AppUser, UserResponseDto> userRepository,
+    IRepository<Post> postRepository,
+    IRepository<AppUser> userRepository,
     IMapper mapper
 ) : ICommandHandler<CreatePostCommand, PostResponseDto>
 {
     public async Task<PostResponseDto> Handle(CreatePostCommand request, CancellationToken cancellationToken)
     {
         var guid = Parser.ParseIdOrThrow(request.UserId);
-        var user = await userRepository.GetEntityByIdAsync(guid);
+        var user = await userRepository.GetByIdAsync(guid, cancellationToken);
         if (user is null) throw new BadRequestException("User not found.");
 
         var post = PostFactory.Create(request.Text, user);

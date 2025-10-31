@@ -45,28 +45,16 @@ public class AppUserEntityConfiguration : IEntityTypeConfiguration<AppUser>
             .WithOne(x => x.User)
             .HasForeignKey(x => x.UserId)
             .OnDelete(DeleteBehavior.Cascade);
-        
-        builder.Navigation(x => x.Posts)
-            .HasField("_posts")
-            .UsePropertyAccessMode(PropertyAccessMode.Field);
 
         builder.HasMany(x => x.PostLikes)
             .WithOne(x => x.User)
             .HasForeignKey(x => x.UserId)
             .OnDelete(DeleteBehavior.Cascade);
         
-        builder.Navigation(x => x.PostLikes)
-            .HasField("_postLikes")
-            .UsePropertyAccessMode(PropertyAccessMode.Field);
-        
         builder.HasMany(x => x.PostComments)
             .WithOne(x => x.User)
             .HasForeignKey(x => x.UserId)
             .OnDelete(DeleteBehavior.Cascade);
-        
-        builder.Navigation(x => x.PostComments)
-            .HasField("_postComments")
-            .UsePropertyAccessMode(PropertyAccessMode.Field);
 
         builder.Property(x => x.CreatedAt)
             .IsRequired();

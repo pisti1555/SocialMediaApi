@@ -27,7 +27,7 @@ public class RegistrationHandlerTest : BaseUserHandlerTest
         _result = AppResult.Success();
         
         _registrationHandler = new RegistrationHandler(
-            UserRepositoryMock.Object,
+            UserEntityRepositoryMock.Object,
             _tokenServiceMock.Object,
             AuthServiceMock.Object,
             _hasherMock.Object,
@@ -51,8 +51,8 @@ public class RegistrationHandlerTest : BaseUserHandlerTest
             false
         );
         
-        UserRepositoryMock.SetupUserExistsByAnyFilters(false);
-        UserRepositoryMock.SetupSaveChanges();
+        UserEntityRepositoryMock.SetupUserExistsByAnyFilters(false);
+        UserEntityRepositoryMock.SetupSaveChanges();
 
         AuthServiceMock.SetupCreateIdentityUserAsync(_result);
         AuthServiceMock.SetupSaveTokenAsync(AppResult.Success());
@@ -65,14 +65,14 @@ public class RegistrationHandlerTest : BaseUserHandlerTest
         await _registrationHandler.Handle(command, CancellationToken.None);
 
         // Assert
-        UserRepositoryMock.Verify(x => x.ExistsAsync(It.IsAny<Expression<Func<AppUser, bool>>>(), It.IsAny<CancellationToken>()), Times.Exactly(2));
-        UserRepositoryMock.Verify(x => x.Add(It.IsAny<AppUser>()), Times.Once);
-        UserRepositoryMock.Verify(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
+        UserEntityRepositoryMock.Verify(x => x.ExistsAsync(It.IsAny<Expression<Func<AppUser, bool>>>(), It.IsAny<CancellationToken>()), Times.Exactly(2));
+        UserEntityRepositoryMock.Verify(x => x.Add(It.IsAny<AppUser>()), Times.Once);
+        UserEntityRepositoryMock.Verify(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
         AuthServiceMock.Verify(x => x.CreateIdentityUserAsync(It.IsAny<AppUser>(), It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Once);
         _tokenServiceMock.Verify(x => x.CreateAccessToken(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<IEnumerable<string>>(), It.IsAny<string>()), Times.Once);
         AuthServiceMock.Verify(x => x.SaveTokenAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>(), It.IsAny<CancellationToken>()), Times.Once);
         AuthServiceMock.Verify(x => x.DeleteIdentityUserAsync(It.IsAny<AppUser>()), Times.Never);
-        UserRepositoryMock.Verify(x => x.Delete(It.IsAny<AppUser>()), Times.Never);
+        UserEntityRepositoryMock.Verify(x => x.Delete(It.IsAny<AppUser>()), Times.Never);
     }
 
     [Fact]
@@ -89,14 +89,14 @@ public class RegistrationHandlerTest : BaseUserHandlerTest
             false
         );
         
-        UserRepositoryMock.SetupUserExistsByAnyFilters(true);
+        UserEntityRepositoryMock.SetupUserExistsByAnyFilters(true);
 
         // Act & Assert
         await Assert.ThrowsAsync<BadRequestException>(() => _registrationHandler.Handle(command, CancellationToken.None));
         
-        UserRepositoryMock.Verify(x => x.ExistsAsync(It.IsAny<Expression<Func<AppUser, bool>>>(), It.IsAny<CancellationToken>()), Times.AtLeastOnce);
-        UserRepositoryMock.Verify(x => x.Add(It.IsAny<AppUser>()), Times.Never);
-        UserRepositoryMock.Verify(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
+        UserEntityRepositoryMock.Verify(x => x.ExistsAsync(It.IsAny<Expression<Func<AppUser, bool>>>(), It.IsAny<CancellationToken>()), Times.AtLeastOnce);
+        UserEntityRepositoryMock.Verify(x => x.Add(It.IsAny<AppUser>()), Times.Never);
+        UserEntityRepositoryMock.Verify(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
     }
 
     [Fact]
@@ -116,8 +116,8 @@ public class RegistrationHandlerTest : BaseUserHandlerTest
         // Act & Assert
         await Assert.ThrowsAsync<BadRequestException>(() => _registrationHandler.Handle(command, CancellationToken.None));
         
-        UserRepositoryMock.Verify(x => x.Add(It.IsAny<AppUser>()), Times.Never);
-        UserRepositoryMock.Verify(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
+        UserEntityRepositoryMock.Verify(x => x.Add(It.IsAny<AppUser>()), Times.Never);
+        UserEntityRepositoryMock.Verify(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
     }
     
     [Fact]
@@ -135,16 +135,16 @@ public class RegistrationHandlerTest : BaseUserHandlerTest
         );
         var failedCreationResult = AppResult.Failure(["Some error message."]);
         
-        UserRepositoryMock.SetupUserExistsByAnyFilters(false);
+        UserEntityRepositoryMock.SetupUserExistsByAnyFilters(false);
         AuthServiceMock.SetupCreateIdentityUserAsync(failedCreationResult);
         
         // Act & Assert
         await Assert.ThrowsAsync<ValidationException>(() => _registrationHandler.Handle(command, CancellationToken.None));
         
-        UserRepositoryMock.Verify(x => x.ExistsAsync(It.IsAny<Expression<Func<AppUser, bool>>>(), It.IsAny<CancellationToken>()), Times.Exactly(2));
+        UserEntityRepositoryMock.Verify(x => x.ExistsAsync(It.IsAny<Expression<Func<AppUser, bool>>>(), It.IsAny<CancellationToken>()), Times.Exactly(2));
         AuthServiceMock.Verify(x => x.CreateIdentityUserAsync(It.IsAny<AppUser>(), It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Once);
-        UserRepositoryMock.Verify(x => x.Add(It.IsAny<AppUser>()), Times.Never);
-        UserRepositoryMock.Verify(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
+        UserEntityRepositoryMock.Verify(x => x.Add(It.IsAny<AppUser>()), Times.Never);
+        UserEntityRepositoryMock.Verify(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
         AuthServiceMock.Verify(x => x.DeleteIdentityUserAsync(It.IsAny<AppUser>()), Times.Never);
     }
 
@@ -162,17 +162,17 @@ public class RegistrationHandlerTest : BaseUserHandlerTest
             false
         );
 
-        UserRepositoryMock.SetupUserExistsByAnyFilters(false);
+        UserEntityRepositoryMock.SetupUserExistsByAnyFilters(false);
         AuthServiceMock.SetupCreateIdentityUserAsync(_result);
-        UserRepositoryMock.SetupSaveChanges(false);
+        UserEntityRepositoryMock.SetupSaveChanges(false);
         
         // Act & Assert
         await Assert.ThrowsAsync<BadRequestException>(() => _registrationHandler.Handle(command, CancellationToken.None));
         
-        UserRepositoryMock.Verify(x => x.ExistsAsync(It.IsAny<Expression<Func<AppUser, bool>>>(), It.IsAny<CancellationToken>()), Times.Exactly(2));
+        UserEntityRepositoryMock.Verify(x => x.ExistsAsync(It.IsAny<Expression<Func<AppUser, bool>>>(), It.IsAny<CancellationToken>()), Times.Exactly(2));
         AuthServiceMock.Verify(x => x.CreateIdentityUserAsync(It.IsAny<AppUser>(), It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Once);
-        UserRepositoryMock.Verify(x => x.Add(It.IsAny<AppUser>()), Times.Once);
-        UserRepositoryMock.Verify(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
+        UserEntityRepositoryMock.Verify(x => x.Add(It.IsAny<AppUser>()), Times.Once);
+        UserEntityRepositoryMock.Verify(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
         AuthServiceMock.Verify(x => x.DeleteIdentityUserAsync(It.IsAny<AppUser>()), Times.Once);
     }
     
@@ -190,8 +190,8 @@ public class RegistrationHandlerTest : BaseUserHandlerTest
             false
         );
         
-        UserRepositoryMock.SetupUserExistsByAnyFilters(false);
-        UserRepositoryMock.SetupSaveChanges();
+        UserEntityRepositoryMock.SetupUserExistsByAnyFilters(false);
+        UserEntityRepositoryMock.SetupSaveChanges();
 
         AuthServiceMock.SetupCreateIdentityUserAsync(_result);
         AuthServiceMock.SetupSaveTokenAsync(AppResult.Failure(["Some error message."]));
@@ -203,13 +203,13 @@ public class RegistrationHandlerTest : BaseUserHandlerTest
         // Act & Assert
         await Assert.ThrowsAsync<BadRequestException>(() => _registrationHandler.Handle(command, CancellationToken.None));
 
-        UserRepositoryMock.Verify(x => x.ExistsAsync(It.IsAny<Expression<Func<AppUser, bool>>>(), It.IsAny<CancellationToken>()), Times.Exactly(2));
-        UserRepositoryMock.Verify(x => x.Add(It.IsAny<AppUser>()), Times.Once);
-        UserRepositoryMock.Verify(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Exactly(2));
+        UserEntityRepositoryMock.Verify(x => x.ExistsAsync(It.IsAny<Expression<Func<AppUser, bool>>>(), It.IsAny<CancellationToken>()), Times.Exactly(2));
+        UserEntityRepositoryMock.Verify(x => x.Add(It.IsAny<AppUser>()), Times.Once);
+        UserEntityRepositoryMock.Verify(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Exactly(2));
         AuthServiceMock.Verify(x => x.CreateIdentityUserAsync(It.IsAny<AppUser>(), It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Once);
         _tokenServiceMock.Verify(x => x.CreateAccessToken(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<IEnumerable<string>>(), It.IsAny<string>()), Times.Once);
         AuthServiceMock.Verify(x => x.SaveTokenAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>(), It.IsAny<CancellationToken>()), Times.Once);
         AuthServiceMock.Verify(x => x.DeleteIdentityUserAsync(It.IsAny<AppUser>()), Times.Once);
-        UserRepositoryMock.Verify(x => x.Delete(It.IsAny<AppUser>()), Times.Once);
+        UserEntityRepositoryMock.Verify(x => x.Delete(It.IsAny<AppUser>()), Times.Once);
     }
 }

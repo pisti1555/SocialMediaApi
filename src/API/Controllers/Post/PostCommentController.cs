@@ -4,7 +4,7 @@ using API.Extensions;
 using Application.Requests.Posts.PostComment.Commands.AddCommentToPost;
 using Application.Requests.Posts.PostComment.Commands.RemoveCommentFromPost;
 using Application.Requests.Posts.PostComment.Commands.UpdateCommentOfPost;
-using Application.Requests.Posts.PostComment.Queries.GetCommentsOfPost;
+using Application.Requests.Posts.PostComment.Queries.GetAllOfPost;
 using Application.Responses;
 using Asp.Versioning;
 using Cortex.Mediator;

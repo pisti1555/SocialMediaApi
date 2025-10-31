@@ -7,7 +7,7 @@ using Domain.Common.Exceptions.CustomExceptions;
 using XPost = Domain.Posts.Post;
 using XLike = Domain.Posts.PostLike;
 
-namespace Application.Requests.Posts.PostLike.Queries.GetLikesOfPost;
+namespace Application.Requests.Posts.PostLike.Queries.GetAllOfPost;
 
 public class GetLikesOfPostHandler(
     IRepository<XPost, PostResponseDto> postRepository,

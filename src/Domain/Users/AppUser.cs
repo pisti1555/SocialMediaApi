@@ -13,14 +13,11 @@ public class AppUser : EntityBase
     public DateTime LastActive { get; private set; } = DateTime.UtcNow;
     
     // Relationships
-    private List<Post> _posts = [];
-    public IReadOnlyCollection<Post> Posts => _posts.AsReadOnly();
+    public ICollection<Post> Posts = [];
+    public ICollection<PostComment> PostComments = [];
+    public ICollection<PostLike> PostLikes = [];
     
-    private List<PostComment> _postComments = [];
-    public IReadOnlyCollection<PostComment> PostComments => _postComments.AsReadOnly();
-    
-    private List<PostLike> _postLikes = [];
-    public IReadOnlyCollection<PostLike> PostLikes => _postLikes.AsReadOnly();
+    public ICollection<Friendship> Friends = [];
     
     // Constructors
     protected internal AppUser() { }

@@ -15,7 +15,7 @@ public class GetAllUsersPagedHandlerTest : BaseUserHandlerTest
 
     public GetAllUsersPagedHandlerTest()
     {
-        _handler = new GetAllUsersPagedHandler(UserRepositoryMock.Object);
+        _handler = new GetAllUsersPagedHandler(UserQueryRepositoryMock.Object);
         
         var usersList = TestDataFactory.CreateUsers(5);
         var userResponseDtoList = Mapper.Map<List<UserResponseDto>>(usersList);
@@ -51,13 +51,13 @@ public class GetAllUsersPagedHandlerTest : BaseUserHandlerTest
     public async Task Handle_WhenItems_ShouldReturnPagedResult()
     {
         // Arrange
-        UserRepositoryMock.SetupGetPaged(_users);
+        UserQueryRepositoryMock.SetupGetPaged(_users);
 
         // Act
         var result = await _handler.Handle(Query, CancellationToken.None);
 
         // Assert
-        UserRepositoryMock.VerifyGetPaged();
+        UserQueryRepositoryMock.VerifyGetPaged();
         
         AssertUsersMatch(_users, result);
     }
@@ -66,12 +66,12 @@ public class GetAllUsersPagedHandlerTest : BaseUserHandlerTest
     public async Task Handle_WhenNoItemsFound_ShouldReturnEmptyResult()
     {
         // Arrange
-        UserRepositoryMock.SetupGetPaged(PagedResult<UserResponseDto>.Create([], 0, 1, 10));
+        UserQueryRepositoryMock.SetupGetPaged(PagedResult<UserResponseDto>.Create([], 0, 1, 10));
         
         var result = await _handler.Handle(Query, CancellationToken.None);
         
         // Assert
-        UserRepositoryMock.VerifyGetPaged();
+        UserQueryRepositoryMock.VerifyGetPaged();
         
         Assert.NotNull(result);
         Assert.Empty(result.Items);

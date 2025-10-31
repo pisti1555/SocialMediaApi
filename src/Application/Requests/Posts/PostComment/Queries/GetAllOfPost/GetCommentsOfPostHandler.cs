@@ -7,7 +7,7 @@ using Domain.Common.Exceptions.CustomExceptions;
 using Domain.Posts;
 using XComment = Domain.Posts.PostComment;
 
-namespace Application.Requests.Posts.PostComment.Queries.GetCommentsOfPost;
+namespace Application.Requests.Posts.PostComment.Queries.GetAllOfPost;
 
 public class GetCommentsOfPostHandler(
     IRepository<Post, PostResponseDto> postRepository,

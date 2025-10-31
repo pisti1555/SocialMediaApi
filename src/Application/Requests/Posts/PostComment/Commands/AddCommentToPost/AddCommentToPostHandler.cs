@@ -13,9 +13,9 @@ using XComment = Domain.Posts.PostComment;
 namespace Application.Requests.Posts.PostComment.Commands.AddCommentToPost;
 
 public class AddCommentToPostHandler(
-    IRepository<AppUser, UserResponseDto> userRepository,
-    IRepository<Post, PostResponseDto> postRepository,
-    IRepository<XComment, PostCommentResponseDto> commentRepository,
+    IRepository<AppUser> userRepository,
+    IRepository<Post> postRepository,
+    IRepository<XComment> commentRepository,
     ICacheService cache,
     IMapper mapper
 ) : ICommandHandler<AddCommentToPostCommand, PostCommentResponseDto>
@@ -25,10 +25,10 @@ public class AddCommentToPostHandler(
         var userGuid = Parser.ParseIdOrThrow(request.UserId);
         var postGuid = Parser.ParseIdOrThrow(request.PostId);
         
-        var user = await userRepository.GetEntityByIdAsync(userGuid);
+        var user = await userRepository.GetByIdAsync(userGuid, cancellationToken);
         if (user is null) throw new BadRequestException("User not found.");
         
-        var post = await postRepository.GetEntityByIdAsync(postGuid);
+        var post = await postRepository.GetByIdAsync(postGuid, cancellationToken);
         if (post is null) throw new NotFoundException("Post not found.");
         
         var comment = PostCommentFactory.Create(request.Text, user, post);
